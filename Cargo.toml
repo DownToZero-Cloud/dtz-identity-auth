@@ -2,6 +2,11 @@
 name = "dtz-identity-auth"
 version = "0.1.0"
 edition = "2021"
+authors = ["Jens Walter <jens@apimeister.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/DownToZero-Cloud/dtz-identity-auth/"
+description = "Provides authentication traits for DownToZero backends."
+
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

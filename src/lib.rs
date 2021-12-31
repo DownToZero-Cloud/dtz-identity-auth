@@ -13,7 +13,7 @@ pub struct DtzProfile{
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub roles: Vec<String>,
 }
-pub struct DtzUser(DtzProfile);
+pub struct DtzUser(pub DtzProfile);
 
 #[async_trait]
 impl<B> FromRequest<B> for DtzUser
