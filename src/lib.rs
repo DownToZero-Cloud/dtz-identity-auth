@@ -44,7 +44,8 @@ where
         if let Some(context) = context {
           let context_str = context.to_str().unwrap().to_string();
           if context_str.len() != 36 {
-            return Err((StatusCode::UNAUTHORIZED, format!("invalid context id: {}", context_str)));
+            eprintln!("invalid context id: {}", context_str);
+            return Err((StatusCode::UNAUTHORIZED, "invalid context id"));
           }else{
             profile.context_id = Uuid::parse_str(&context_str).unwrap();
           }
@@ -82,7 +83,8 @@ where
         if let Some(context) = context {
           let context_str = context.to_str().unwrap().to_string();
           if context_str.len() != 36 {
-            return Err((StatusCode::UNAUTHORIZED, format!("invalid context id: {}", context_str)));
+            eprintln!("invalid context id: {}", context_str);
+            return Err((StatusCode::UNAUTHORIZED, "invalid context id"));
           }else{
             profile.context_id = Uuid::parse_str(&context_str).unwrap();
           }
