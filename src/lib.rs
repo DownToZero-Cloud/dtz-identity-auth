@@ -42,7 +42,12 @@ where
           profile.identity_id = Uuid::parse_str(&identity.to_str().unwrap().to_string()).unwrap();
         }
         if let Some(context) = context {
-          profile.context_id = Uuid::parse_str(&context.to_str().unwrap().to_string()).unwrap();
+          let context_str = context.to_str().unwrap().to_string();
+          if context_str.len() != 36 {
+            return Err((StatusCode::UNAUTHORIZED, format!("invalid context id: {}", context_str)));
+          }else{
+            profile.context_id = Uuid::parse_str(&context_str).unwrap();
+          }
         }
         if let Some(roles) = roles {
           let arr: Vec<&str> = roles.to_str().unwrap().split(',').collect();
@@ -75,7 +80,12 @@ where
           return Ok(DtzOptionalUser(None));
         }
         if let Some(context) = context {
-          profile.context_id = Uuid::parse_str(&context.to_str().unwrap().to_string()).unwrap();
+          let context_str = context.to_str().unwrap().to_string();
+          if context_str.len() != 36 {
+            return Err((StatusCode::UNAUTHORIZED, format!("invalid context id: {}", context_str)));
+          }else{
+            profile.context_id = Uuid::parse_str(&context_str).unwrap();
+          }
         }
         if let Some(roles) = roles {
           let arr: Vec<&str> = roles.to_str().unwrap().split(',').collect();
