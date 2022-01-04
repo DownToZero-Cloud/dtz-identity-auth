@@ -55,38 +55,17 @@ where
     let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
     let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
     let profile: DtzProfile;
-    if cookie.is_some() {
-      profile = verify_token_from_cookie(cookie.unwrap().clone()).unwrap();
-    }else if authorization.is_some() {
-      profile = verify_token_from_bearer(authorization.unwrap().clone()).unwrap();
+    if let Some(cookie) = cookie {
+      profile = verify_token_from_cookie(cookie.clone()).unwrap();
+    }else if let Some(authorization) = authorization {
+      profile = verify_token_from_bearer(authorization.clone()).unwrap();
     }else {
       return Err((StatusCode::UNAUTHORIZED, "no authorization header"));
     }
 
-    let identity = req.headers().and_then(|headers| headers.get("dtz-identity"));
-    let context = req.headers().and_then(|headers| headers.get("dtz-context"));
-    let roles = req.headers().and_then(|headers| headers.get("dtz-roles"));
-
-    let mut profile = DtzProfile::default();
-    if let Some(identity) = identity {
-      profile.identity_id = Uuid::parse_str(&identity.to_str().unwrap().to_string()).unwrap();
-    }
-    if let Some(context) = context {
-      let context_str = context.to_str().unwrap().to_string();
-      if context_str.len() != 36 {
-        eprintln!("invalid context id: {}", context_str);
-        return Err((StatusCode::UNAUTHORIZED, "invalid context id"));
-      }else{
-        profile.context_id = Uuid::parse_str(&context_str).unwrap();
-      }
-    }
-    if let Some(roles) = roles {
-      let arr: Vec<&str> = roles.to_str().unwrap().split(',').collect();
-      let mut roles: Vec<String> = Vec::new();
-      for role in arr {
-        roles.push(role.to_string());
-      }
-      profile.roles = roles;
+    let scope = replace_placeholder(N, &profile);
+    if !profile.roles.contains(&scope) {
+      return Err((StatusCode::FORBIDDEN, "no permission"));
     }
     Ok(DtzRequiredRole(profile))
   }
@@ -109,7 +88,7 @@ where
 
         let mut profile = DtzProfile::default();
         if let Some(identity) = identity {
-          profile.identity_id = Uuid::parse_str(&identity.to_str().unwrap().to_string()).unwrap();
+          profile.identity_id = Uuid::parse_str(identity.to_str().unwrap()).unwrap();
         }
         if let Some(context) = context {
           let context_str = context.to_str().unwrap().to_string();
@@ -149,7 +128,7 @@ where
 
         let mut profile = DtzProfile::default();
         if let Some(identity) = identity {
-          profile.identity_id = Uuid::parse_str(&identity.to_str().unwrap().to_string()).unwrap();
+          profile.identity_id = Uuid::parse_str(identity.to_str().unwrap()).unwrap();
         }else{
           return Ok(DtzOptionalUser(None));
         }
@@ -178,19 +157,19 @@ fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile,String> {
   let cookie_str = cookie.to_str().unwrap();
   let c = Cookie::parse(cookie_str).unwrap();
   let jwt = c.value().to_string();
-  return verifyToken(jwt);
+  verify_token(jwt)
 }
 
 fn verify_token_from_bearer(bearer: HeaderValue) -> Result<DtzProfile,String> {
   let bearer_str = bearer.to_str().unwrap();
   let jwt = bearer_str.replace("Bearer ","");
-  return verifyToken(jwt);
+  verify_token(jwt)
 }
 
-fn verifyToken(token: String) -> Result<DtzProfile,String> {
+fn verify_token(token: String) -> Result<DtzProfile,String> {
 
-  if token.as_str().contains(".") {
-    let jwt_parts: Vec<&str> = token.split(".").collect();
+  if token.as_str().contains('.') {
+    let jwt_parts: Vec<&str> = token.split('.').collect();
     let jwt_alg = jwt_parts.get(0).unwrap();
     let jwt_payload = jwt_parts.get(1).unwrap();
     let jwt_sig = jwt_parts.get(2).unwrap();
@@ -211,11 +190,55 @@ fn verifyToken(token: String) -> Result<DtzProfile,String> {
     let result = DtzProfile{
       identity_id: Uuid::parse_str(&claims.registered.subject.unwrap()).unwrap(),
       context_id: Uuid::parse_str(scope_str).unwrap(),
-      roles: roles,
+      roles,
     };
-    return Ok(result);
+    Ok(result)
   }else{
     //deny
     Err("not authorized".to_string())
+  }
+}
+
+fn replace_placeholder(template: &str, profile: &DtzProfile) -> String {
+  let mut result = template.to_string();
+  result = result.replace("{identity_id}", &profile.identity_id.to_string());
+  result = result.replace("{context_id}", &profile.context_id.to_string());
+  result = result.replace("{roles}", &profile.roles.join(","));
+  result
+}
+
+#[cfg(test)]
+mod tests {
+  use uuid::Uuid;
+  use super::*;
+  #[test]
+  fn test_replacement_identity() {
+    let identity = DtzProfile{
+      identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+      context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+      roles: vec!["admin".to_string()],
+    };
+    let result = super::replace_placeholder("https://dtz.rocks/context/admin/{identity_id}", &identity);
+    assert_eq!(result, "https://dtz.rocks/context/admin/00000000-0000-0000-0000-000000000000");
+  }
+  #[test]
+  fn test_replacement_context() {
+    let identity = DtzProfile{
+      identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+      context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+      roles: vec!["admin".to_string()],
+    };
+    let result = super::replace_placeholder("https://dtz.rocks/context/admin/{context_id}", &identity);
+    assert_eq!(result, "https://dtz.rocks/context/admin/00000000-0000-0000-0000-000000000000");
+  }
+  #[test]
+  fn test_replacement_nothing() {
+    let identity = DtzProfile{
+      identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+      context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+      roles: vec!["admin".to_string()],
+    };
+    let result = super::replace_placeholder("https://dtz.rocks/context/admin", &identity);
+    assert_eq!(result, "https://dtz.rocks/context/admin");
   }
 }
