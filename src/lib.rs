@@ -82,30 +82,15 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let identity = req.headers().and_then(|headers| headers.get("dtz-identity"));
-        let context = req.headers().and_then(|headers| headers.get("dtz-context"));
-        let roles = req.headers().and_then(|headers| headers.get("dtz-roles"));
-
-        let mut profile = DtzProfile::default();
-        if let Some(identity) = identity {
-          profile.identity_id = Uuid::parse_str(identity.to_str().unwrap()).unwrap();
-        }
-        if let Some(context) = context {
-          let context_str = context.to_str().unwrap().to_string();
-          if context_str.len() != 36 {
-            eprintln!("invalid context id: {}", context_str);
-            return Err((StatusCode::UNAUTHORIZED, "invalid context id"));
-          }else{
-            profile.context_id = Uuid::parse_str(&context_str).unwrap();
-          }
-        }
-        if let Some(roles) = roles {
-          let arr: Vec<&str> = roles.to_str().unwrap().split(',').collect();
-          let mut roles: Vec<String> = Vec::new();
-          for role in arr {
-            roles.push(role.to_string());
-          }
-          profile.roles = roles;
+        let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
+        let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
+        let profile: DtzProfile;
+        if let Some(cookie) = cookie {
+          profile = verify_token_from_cookie(cookie.clone()).unwrap();
+        }else if let Some(authorization) = authorization {
+          profile = verify_token_from_bearer(authorization.clone()).unwrap();
+        }else {
+          return Err((StatusCode::UNAUTHORIZED, "no authorization header"));
         }
         Ok(DtzRequiredUser(profile))
     }
@@ -177,7 +162,6 @@ fn verify_token(token: String) -> Result<DtzProfile,String> {
       digest: MessageDigest::sha256(),
       key: PKey::public_key_from_pem(PUBLIC_KEY.as_bytes()).unwrap(),
     };
-    // trace!("payload: {}",jwt_payload);
     let _verification_result = algorithm.verify(jwt_alg, jwt_payload, jwt_sig).unwrap();
     let claims = Claims::from_base64(jwt_payload).unwrap();
     let roles_claim = claims.private.get("roles").unwrap();
