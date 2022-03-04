@@ -17,6 +17,8 @@ use jwt::algorithm::VerifyingAlgorithm;
 use jwt::claims::Claims;
 use jwt::FromBase64;
 use cookie::Cookie;
+use hyper::{Body, Request,Client,Method};
+use hyper::body;
 
 /// public key used for JWT signature verification
 const PUBLIC_KEY: &str = r#"-----BEGIN PUBLIC KEY-----
@@ -54,13 +56,32 @@ where
   async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
     let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
     let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
+    let header_api_key: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-api-key"));
+    let header_context_id: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-dtz-context"));
     let profile: DtzProfile;
     if let Some(cookie) = cookie {
       profile = verify_token_from_cookie(cookie.clone()).unwrap();
     }else if let Some(authorization) = authorization {
       profile = verify_token_from_bearer(authorization.clone()).unwrap();
+    }else if let Some(header_api_key) = header_api_key {
+      if header_context_id.is_some() {
+        profile = verifiy_api_key(header_api_key.to_str().unwrap(), Some(header_context_id.unwrap().to_str().unwrap())).await.unwrap();
+      }else{
+        profile = verifiy_api_key(header_api_key.to_str().unwrap(), None).await.unwrap();
+      }
     }else {
-      return Err((StatusCode::UNAUTHORIZED, "no authorization header"));
+      //look for GET params
+      let query = req.uri().query().unwrap_or_default();
+      let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
+      if value.api_key.is_some() {
+        if value.context_id.is_some() {
+          profile = verifiy_api_key(&value.api_key.unwrap(), Some(&value.context_id.unwrap())).await.unwrap();
+        }else{
+          profile = verifiy_api_key(&value.api_key.unwrap(), None).await.unwrap();
+        }
+      }else{
+        return Err((StatusCode::UNAUTHORIZED, "no authorization header"));
+      }
     }
 
     let scope = replace_placeholder(N, &profile);
@@ -179,6 +200,51 @@ fn verify_token(token: String) -> Result<DtzProfile,String> {
     Ok(result)
   }else{
     //deny
+    Err("not authorized".to_string())
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TokenResponse {
+  access_token: String,
+  scope: Option<String>,
+  token_type: String,
+  expires_in: u32,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GetAuthParams {
+  api_key: Option<String>,
+  context_id: Option<String>,
+}
+
+async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzProfile,String> {
+  let req_data = if context_id.is_some() {
+    format!("{{\"apiKey\":\"{}\",\"contextId\":\"{}\"}}",api_key,context_id.unwrap())
+  } else {
+    format!("{{\"apiKey\":\"{}\"}}",api_key)
+  };
+  let req = Request::builder()
+      .method(Method::POST)
+      .uri("https://identity.dtz.rocks/api/2021-02-21/auth/apikey")
+      .header("content-type", "application/json")
+      .body(Body::from(req_data)).unwrap();
+  let https = hyper_rustls::HttpsConnectorBuilder::new()
+      .with_native_roots()
+      .https_only()
+      .enable_http1()
+      .build();
+  let http_client = Client::builder().build(https);
+  let resp = http_client.request(req).await.unwrap();
+  if resp.status().is_success() {
+    let bytes = body::to_bytes(resp.into_body()).await.unwrap();
+    let resp_str = String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
+    let token_response: TokenResponse = serde_json::from_str(&resp_str).unwrap();
+    let jwt = token_response.access_token;
+    verify_token(jwt)
+  }else{
     Err("not authorized".to_string())
   }
 }
