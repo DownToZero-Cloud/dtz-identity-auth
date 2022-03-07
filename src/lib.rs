@@ -54,41 +54,17 @@ where
   type Rejection = (StatusCode, &'static str);
 
   async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-    let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
-    let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
-    let header_api_key: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-api-key"));
-    let header_context_id: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-dtz-context"));
-    let profile: DtzProfile;
-    if let Some(cookie) = cookie {
-      profile = verify_token_from_cookie(cookie.clone()).unwrap();
-    }else if let Some(authorization) = authorization {
-      profile = verify_token_from_bearer(authorization.clone()).unwrap();
-    }else if let Some(header_api_key) = header_api_key {
-      if header_context_id.is_some() {
-        profile = verifiy_api_key(header_api_key.to_str().unwrap(), Some(header_context_id.unwrap().to_str().unwrap())).await.unwrap();
-      }else{
-        profile = verifiy_api_key(header_api_key.to_str().unwrap(), None).await.unwrap();
-      }
-    }else {
-      //look for GET params
-      let query = req.uri().query().unwrap_or_default();
-      let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
-      if value.api_key.is_some() {
-        if value.context_id.is_some() {
-          profile = verifiy_api_key(&value.api_key.unwrap(), Some(&value.context_id.unwrap())).await.unwrap();
-        }else{
-          profile = verifiy_api_key(&value.api_key.unwrap(), None).await.unwrap();
-        }
-      }else{
-        return Err((StatusCode::UNAUTHORIZED, "no authorization header"));
-      }
-    }
-
-    let scope = replace_placeholder(N, &profile);
-    if !profile.roles.contains(&scope) {
-      return Err((StatusCode::FORBIDDEN, "no permission"));
-    }
-    Ok(DtzRequiredRole(profile))
+    let result = get_profile_from_request(req).await;
+    match result {
+        Ok(profile) => {
+            let scope = replace_placeholder(N, &profile);
+            if !profile.roles.contains(&scope) {
+                return Err((StatusCode::FORBIDDEN, "no permission"));
+            }
+            Ok(DtzRequiredRole(profile))
+        },
+        Err(e) => Err((StatusCode::UNAUTHORIZED, &e)),
+    } 
   }
 }
 
@@ -103,17 +79,11 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
-        let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
-        let profile: DtzProfile;
-        if let Some(cookie) = cookie {
-          profile = verify_token_from_cookie(cookie.clone()).unwrap();
-        }else if let Some(authorization) = authorization {
-          profile = verify_token_from_bearer(authorization.clone()).unwrap();
-        }else {
-          return Err((StatusCode::UNAUTHORIZED, "no authorization header"));
+        let result = get_profile_from_request(req).await;
+        match result {
+            Ok(profile) => Ok(DtzRequiredUser(profile)),
+            Err(e) => Err((StatusCode::UNAUTHORIZED, e)),
         }
-        Ok(DtzRequiredUser(profile))
     }
 }
 
@@ -128,35 +98,45 @@ where
     type Rejection = (StatusCode, &'static str);
 
     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let identity = req.headers().and_then(|headers| headers.get("dtz-identity"));
-        let context = req.headers().and_then(|headers| headers.get("dtz-context"));
-        let roles = req.headers().and_then(|headers| headers.get("dtz-roles"));
-
-        let mut profile = DtzProfile::default();
-        if let Some(identity) = identity {
-          profile.identity_id = Uuid::parse_str(identity.to_str().unwrap()).unwrap();
-        }else{
-          return Ok(DtzOptionalUser(None));
+        let result = get_profile_from_request(req).await;
+        match result {
+            Ok(profile) => Ok(DtzOptionalUser(Some(profile))),
+            Err(_e) => Ok(DtzOptionalUser(None)),
         }
-        if let Some(context) = context {
-          let context_str = context.to_str().unwrap().to_string();
-          if context_str.len() != 36 {
-            eprintln!("invalid context id: {}", context_str);
-            return Err((StatusCode::UNAUTHORIZED, "invalid context id"));
-          }else{
-            profile.context_id = Uuid::parse_str(&context_str).unwrap();
-          }
-        }
-        if let Some(roles) = roles {
-          let arr: Vec<&str> = roles.to_str().unwrap().split(',').collect();
-          let mut roles: Vec<String> = Vec::new();
-          for role in arr {
-            roles.push(role.to_string());
-          }
-          profile.roles = roles;
-        }
-        Ok(DtzOptionalUser(Some(profile)))
     }
+}
+
+async fn get_profile_from_request<B>(req: &mut RequestParts<B>) -> Result<DtzProfile,&'static str> {
+  let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
+  let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
+  let header_api_key: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-api-key"));
+  let header_context_id: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-dtz-context"));
+  let profile: DtzProfile;
+  if let Some(cookie) = cookie {
+    profile = verify_token_from_cookie(cookie.clone()).unwrap();
+  }else if let Some(authorization) = authorization {
+    profile = verify_token_from_bearer(authorization.clone()).unwrap();
+  }else if let Some(header_api_key) = header_api_key {
+    if header_context_id.is_some() {
+      profile = verifiy_api_key(header_api_key.to_str().unwrap(), Some(header_context_id.unwrap().to_str().unwrap())).await.unwrap();
+    }else{
+      profile = verifiy_api_key(header_api_key.to_str().unwrap(), None).await.unwrap();
+    }
+  }else {
+    //look for GET params
+    let query = req.uri().query().unwrap_or_default();
+    let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
+    if value.api_key.is_some() {
+      if value.context_id.is_some() {
+        profile = verifiy_api_key(&value.api_key.unwrap(), Some(&value.context_id.unwrap())).await.unwrap();
+      }else{
+        profile = verifiy_api_key(&value.api_key.unwrap(), None).await.unwrap();
+      }
+    }else{
+      return Err("no authorization header");
+    }
+  }
+  Ok(profile)
 }
 
 fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile,String> {
