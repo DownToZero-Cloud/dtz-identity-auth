@@ -19,6 +19,8 @@ use jwt::FromBase64;
 use cookie::Cookie;
 use hyper::{Body, Request,Client,Method};
 use hyper::body;
+use std::{sync::Mutex, collections::HashMap};
+use once_cell::sync::Lazy;
 
 /// public key used for JWT signature verification
 const PUBLIC_KEY: &str = r#"-----BEGIN PUBLIC KEY-----
@@ -32,7 +34,7 @@ KQIDAQAB
 -----END PUBLIC KEY-----"#;
 
 /// User profile of DownToZero.cloud
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct DtzProfile {
   /// Identifier of the user
   pub identity_id: Uuid,
@@ -200,17 +202,29 @@ struct GetAuthParams {
   context_id: Option<String>,
 }
 
+static KNOWN_IDENTITIES: Lazy<Mutex<HashMap<String, DtzProfile>>> = Lazy::new(|| {
+    let m = HashMap::new();
+    Mutex::new(m)
+});
+
 async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzProfile,String> {
   let req_data = if context_id.is_some() {
     format!("{{\"apiKey\":\"{}\",\"contextId\":\"{}\"}}",api_key,context_id.unwrap())
   } else {
     format!("{{\"apiKey\":\"{}\"}}",api_key)
   };
+  {
+    let x = KNOWN_IDENTITIES.lock().unwrap();
+    if x.contains_key(&req_data){
+      let profile = x.get(&req_data).unwrap().clone();
+      return Ok(profile);
+    }
+  }
   let req = Request::builder()
       .method(Method::POST)
       .uri("https://identity.dtz.rocks/api/2021-02-21/auth/apikey")
       .header("content-type", "application/json")
-      .body(Body::from(req_data)).unwrap();
+      .body(Body::from(req_data.clone())).unwrap();
   let https = hyper_rustls::HttpsConnectorBuilder::new()
       .with_native_roots()
       .https_only()
@@ -223,7 +237,15 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
     let resp_str = String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
     let token_response: TokenResponse = serde_json::from_str(&resp_str).unwrap();
     let jwt = token_response.access_token;
-    verify_token(jwt)
+    let result = verify_token(jwt);
+    //add to cache
+    {
+      if result.is_ok() {
+        let mut x = KNOWN_IDENTITIES.lock().unwrap();
+        x.insert(req_data,result.clone().unwrap());
+      }
+    }
+    result
   }else{
     Err("not authorized".to_string())
   }
