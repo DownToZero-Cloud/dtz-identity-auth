@@ -19,7 +19,8 @@ use jwt::FromBase64;
 use cookie::Cookie;
 use hyper::{Body, Request,Client,Method};
 use hyper::body;
-use std::{sync::Mutex, collections::HashMap};
+use lru_time_cache::LruCache;
+use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 /// public key used for JWT signature verification
@@ -202,8 +203,9 @@ struct GetAuthParams {
   context_id: Option<String>,
 }
 
-static KNOWN_IDENTITIES: Lazy<Mutex<HashMap<String, DtzProfile>>> = Lazy::new(|| {
-    let m = HashMap::new();
+static KNOWN_IDENTITIES: Lazy<Mutex<LruCache::<String, DtzProfile>>> = Lazy::new(|| {
+    let time_to_live = std::time::Duration::from_secs(3600);
+    let m = LruCache::<String, DtzProfile>::with_expiry_duration_and_capacity(time_to_live,100);
     Mutex::new(m)
 });
 
@@ -214,7 +216,7 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
     format!("{{\"apiKey\":\"{}\"}}",api_key)
   };
   {
-    let x = KNOWN_IDENTITIES.lock().unwrap();
+    let mut x = KNOWN_IDENTITIES.lock().unwrap();
     if x.contains_key(&req_data){
       let profile = x.get(&req_data).unwrap().clone();
       return Ok(profile);
