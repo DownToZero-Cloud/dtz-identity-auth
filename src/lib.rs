@@ -222,10 +222,13 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
       return Ok(profile);
     }
   }
+  //get hostname env var
+  let hostname = std::env::var("HOSTNAME").unwrap_or("localhost".to_string());
   let req = Request::builder()
       .method(Method::POST)
       .uri("https://identity.dtz.rocks/api/2021-02-21/auth/apikey")
       .header("content-type", "application/json")
+      .header("X-DTZ-SOURCE", hostname)
       .body(Body::from(req_data.clone())).unwrap();
   let https = hyper_rustls::HttpsConnectorBuilder::new()
       .with_native_roots()
