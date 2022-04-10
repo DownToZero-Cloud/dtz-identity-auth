@@ -1,3 +1,7 @@
+# 0.4.7 2022-03-11
+
+* support foreign cookies
+
 # 0.4.6 2022-03-11
 
 * update deps

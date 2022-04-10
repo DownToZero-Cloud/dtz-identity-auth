@@ -117,7 +117,14 @@ async fn get_profile_from_request<B>(req: &mut RequestParts<B>) -> Result<DtzPro
   let header_context_id: Option<&HeaderValue> = headers.get("x-dtz-context");
   let profile: DtzProfile;
   if let Some(cookie) = cookie {
-    profile = verify_token_from_cookie(cookie.clone()).unwrap();
+    match verify_token_from_cookie(cookie.clone()) {
+      Ok(p) => {
+        profile = p;
+      },
+      Err(_) => {
+        return Err("no valid token found in cookie");
+      }
+    }
   }else if let Some(authorization) = authorization {
     match verify_token_from_bearer(authorization.clone()) {
       Ok(p) => {
