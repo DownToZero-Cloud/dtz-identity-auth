@@ -110,10 +110,11 @@ where
 }
 
 async fn get_profile_from_request<B>(req: &mut RequestParts<B>) -> Result<DtzProfile,&'static str> {
-  let cookie: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("cookie"));
-  let authorization: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("authorization"));
-  let header_api_key: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-api-key"));
-  let header_context_id: Option<&HeaderValue> = req.headers().and_then(|headers| headers.get("x-dtz-context"));
+  let headers = req.headers().clone();
+  let cookie: Option<&HeaderValue> = headers.get("cookie");
+  let authorization: Option<&HeaderValue> = headers.get("authorization");
+  let header_api_key: Option<&HeaderValue> = headers.get("x-api-key");
+  let header_context_id: Option<&HeaderValue> = headers.get("x-dtz-context");
   let profile: DtzProfile;
   if let Some(cookie) = cookie {
     profile = verify_token_from_cookie(cookie.clone()).unwrap();
