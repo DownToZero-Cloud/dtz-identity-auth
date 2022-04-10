@@ -1,5 +1,9 @@
 # 0.4.4 2022-03-11
 
+* update deps
+
+# 0.4.4 2022-03-11
+
 * cache api keys
 * add x-dtz-source header
 

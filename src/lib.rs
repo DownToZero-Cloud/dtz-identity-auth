@@ -118,7 +118,14 @@ async fn get_profile_from_request<B>(req: &mut RequestParts<B>) -> Result<DtzPro
   if let Some(cookie) = cookie {
     profile = verify_token_from_cookie(cookie.clone()).unwrap();
   }else if let Some(authorization) = authorization {
-    profile = verify_token_from_bearer(authorization.clone()).unwrap();
+    match verify_token_from_bearer(authorization.clone()) {
+      Ok(p) => {
+        profile = p;
+      },
+      Err(_) => {
+        return Err("not authorized");
+      }
+    }
   }else if let Some(header_api_key) = header_api_key {
     if header_context_id.is_some() {
       profile = verifiy_api_key(header_api_key.to_str().unwrap(), Some(header_context_id.unwrap().to_str().unwrap())).await.unwrap();
