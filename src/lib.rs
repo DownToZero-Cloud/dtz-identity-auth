@@ -279,10 +279,12 @@ fn replace_placeholder(template: &str, profile: &DtzProfile) -> String {
   result
 }
 
+/// verifies the role on a given profile
 pub fn verify_role(profile: &DtzProfile, role: &str) -> bool {
   profile.roles.contains(&role.to_string())
 }
 
+/// verifies the role on a given profile within the current context
 pub fn verfify_context_role(profile: &DtzProfile, role: &str) -> bool {
   let replaced_role = replace_placeholder(role, profile);
   profile.roles.contains(&replaced_role.to_string())
