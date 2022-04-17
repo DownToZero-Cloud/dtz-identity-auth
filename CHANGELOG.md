@@ -1,3 +1,7 @@
+# 0.4.8
+
+* add verify_role functions
+
 # 0.4.7 2022-03-11
 
 * support foreign cookies

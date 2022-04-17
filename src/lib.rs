@@ -279,6 +279,15 @@ fn replace_placeholder(template: &str, profile: &DtzProfile) -> String {
   result
 }
 
+pub fn verify_role(profile: &DtzProfile, role: &str) -> bool {
+  profile.roles.contains(&role.to_string())
+}
+
+pub fn verfify_context_role(profile: &DtzProfile, role: &str) -> bool {
+  let replaced_role = replace_placeholder(role, profile);
+  profile.roles.contains(&replaced_role.to_string())
+}
+
 #[cfg(test)]
 mod tests {
   use uuid::Uuid;
