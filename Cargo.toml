@@ -1,6 +1,6 @@
 [package]
 name = "dtz-identity-auth"
-version = "0.4.8"
+version = "0.4.9"
 edition = "2021"
 authors = ["Jens Walter <jens@apimeister.com>"]
 license = "Apache-2.0"
@@ -11,7 +11,7 @@ description = "Provides authentication traits for DownToZero backends."
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 axum = { version = "0.5", features = ["http2","headers"] }
-uuid = { version = "0.8", features = ["serde", "v4"] }
+uuid = { version = "1", features = ["serde", "v4"] }
 jwt = { version = "0.16", features = ["openssl"] }
 cookie = "0.16"
 openssl = "0.10"

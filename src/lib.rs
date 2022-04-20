@@ -181,21 +181,27 @@ fn verify_token(token: String) -> Result<DtzProfile,String> {
       digest: MessageDigest::sha256(),
       key: PKey::public_key_from_pem(PUBLIC_KEY.as_bytes()).unwrap(),
     };
-    let _verification_result = algorithm.verify(jwt_alg, jwt_payload, jwt_sig).unwrap();
-    let claims = Claims::from_base64(jwt_payload).unwrap();
-    let roles_claim = claims.private.get("roles").unwrap();
-    let mut roles: Vec<String> = Vec::new();
-    let arr = roles_claim.as_array().unwrap();
-    for role in arr {
-      roles.push(role.as_str().unwrap().to_string());
+    match algorithm.verify(jwt_alg, jwt_payload, jwt_sig) {
+      Ok(_) => {
+        let claims = Claims::from_base64(jwt_payload).unwrap();
+        let roles_claim = claims.private.get("roles").unwrap();
+        let mut roles: Vec<String> = Vec::new();
+        let arr = roles_claim.as_array().unwrap();
+        for role in arr {
+          roles.push(role.as_str().unwrap().to_string());
+        }
+        let scope_str = claims.private.get("scope").unwrap().as_str().unwrap();
+        let result = DtzProfile{
+          identity_id: Uuid::parse_str(&claims.registered.subject.unwrap()).unwrap(),
+          context_id: Uuid::parse_str(scope_str).unwrap(),
+          roles,
+        };
+        Ok(result)
+      },
+      Err(_) => {
+        return Err("invalid token".to_string());
+      }
     }
-    let scope_str = claims.private.get("scope").unwrap().as_str().unwrap();
-    let result = DtzProfile{
-      identity_id: Uuid::parse_str(&claims.registered.subject.unwrap()).unwrap(),
-      context_id: Uuid::parse_str(scope_str).unwrap(),
-      roles,
-    };
-    Ok(result)
   }else{
     //deny
     Err("not authorized".to_string())

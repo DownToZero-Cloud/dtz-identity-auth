@@ -1,3 +1,7 @@
+# 0.4.9 2022-04-20
+
+* fail on invalid jwts
+
 # 0.4.8 2022-04-17
 
 * add verify_role functions
