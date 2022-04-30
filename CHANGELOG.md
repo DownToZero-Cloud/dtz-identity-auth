@@ -1,3 +1,7 @@
+# 0.4.10 2022-04-30
+
+* fix unparsable cookie
+
 # 0.4.9 2022-04-20
 
 * fail on invalid jwts

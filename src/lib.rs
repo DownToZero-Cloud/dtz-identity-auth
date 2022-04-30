@@ -159,9 +159,13 @@ async fn get_profile_from_request<B>(req: &mut RequestParts<B>) -> Result<DtzPro
 
 fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile,String> {
   let cookie_str = cookie.to_str().unwrap();
-  let c = Cookie::parse(cookie_str).unwrap();
-  let jwt = c.value().to_string();
-  verify_token(jwt)
+  match Cookie::parse(cookie_str){
+    Ok(cookie) => {
+      let token = cookie.value().to_string();
+      verify_token(token)
+    },
+    Err(_) => Err("no valid token found in cookie".to_string())
+  }
 }
 
 fn verify_token_from_bearer(bearer: HeaderValue) -> Result<DtzProfile,String> {
