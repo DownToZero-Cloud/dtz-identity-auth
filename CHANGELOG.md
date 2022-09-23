@@ -1,3 +1,7 @@
+# 0.4.11 2022-09-23
+
+* pass through raw token as part of the user profile
+
 # 0.4.10 2022-04-30
 
 * fix unparsable cookie

@@ -44,6 +44,8 @@ pub struct DtzProfile {
   /// available roles granted to the user
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub roles: Vec<String>,
+  /// raw token of the request, if api key was used, a new token is generated
+  pub token: String,
 }
 
 /// struct to hold an authorized user profile
@@ -199,6 +201,7 @@ fn verify_token(token: String) -> Result<DtzProfile,String> {
           identity_id: Uuid::parse_str(&claims.registered.subject.unwrap()).unwrap(),
           context_id: Uuid::parse_str(scope_str).unwrap(),
           roles,
+          token,
         };
         Ok(result)
       },
