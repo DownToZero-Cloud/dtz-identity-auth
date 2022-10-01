@@ -1,3 +1,8 @@
+# 0.5.0 2022-10-01
+
+* avoid const generic
+* implement role check through impl function
+
 # 0.4.11 2022-09-23
 
 * pass through raw token as part of the user profile
