@@ -54,12 +54,8 @@ impl DtzProfile {
     /// checks the profile for the required scope
     #[allow(dead_code)]
     pub fn require(&self, required_role: &str) -> bool {
-        let scope = replace_placeholder(required_role, &self);
-        if self.roles.contains(&scope) {
-            true
-        } else {
-            false
-        }
+        let scope = replace_placeholder(required_role, self);
+        self.roles.contains(&scope)
     }
 }
 
@@ -180,7 +176,7 @@ fn verify_token_from_bearer(bearer: HeaderValue) -> Result<DtzProfile, String> {
 fn verify_token(token: String) -> Result<DtzProfile, String> {
     if token.as_str().contains('.') {
         let jwt_parts: Vec<&str> = token.split('.').collect();
-        let jwt_alg = jwt_parts.get(0).unwrap();
+        let jwt_alg = jwt_parts.first().unwrap();
         let jwt_payload = jwt_parts.get(1).unwrap();
         let jwt_sig = jwt_parts.get(2).unwrap();
         let algorithm = PKeyWithDigest {
@@ -206,7 +202,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 Ok(result)
             }
             Err(_) => {
-                return Err("invalid token".to_string());
+                Err("invalid token".to_string())
             }
         }
     } else {
@@ -254,7 +250,7 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
         }
     }
     //get hostname env var
-    let hostname = std::env::var("HOSTNAME").unwrap_or("localhost".to_string());
+    let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "localhost".to_string());
     let req = Request::builder()
         .method(Method::POST)
         .uri("https://identity.dtz.rocks/api/2021-02-21/auth/apikey")
@@ -304,7 +300,7 @@ pub fn verify_role(profile: &DtzProfile, role: &str) -> bool {
 /// verifies the role on a given profile within the current context
 pub fn verfify_context_role(profile: &DtzProfile, role: &str) -> bool {
     let replaced_role = replace_placeholder(role, profile);
-    profile.roles.contains(&replaced_role.to_string())
+    profile.roles.contains(&replaced_role)
 }
 
 #[cfg(test)]
