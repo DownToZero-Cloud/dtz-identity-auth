@@ -2,9 +2,7 @@
 
 //! crate to provide trait for easier implementation of user profiles within [DownToZero.cloud](https://downtozero.cloud)
 use axum::{
-    async_trait,
-    extract::{FromRequest, RequestParts},
-    http::header::HeaderValue,
+    async_trait, extract::FromRequestParts, http::header::HeaderValue, http::request::Parts,
     http::StatusCode,
 };
 use cookie::Cookie;
@@ -60,13 +58,13 @@ impl DtzProfile {
 }
 
 #[async_trait]
-impl<B> FromRequest<B> for DtzRequiredUser
+impl<B> FromRequestParts<B> for DtzRequiredUser
 where
-    B: Send,
+    B: Send + std::marker::Sync,
 {
     type Rejection = (StatusCode, &'static str);
 
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(req: &mut Parts, _state: &B) -> Result<Self, Self::Rejection> {
         let result = get_profile_from_request(req).await;
         match result {
             Ok(profile) => Ok(DtzRequiredUser(profile)),
@@ -79,13 +77,13 @@ where
 pub struct DtzOptionalUser(pub Option<DtzProfile>);
 
 #[async_trait]
-impl<B> FromRequest<B> for DtzOptionalUser
+impl<B> FromRequestParts<B> for DtzOptionalUser
 where
-    B: Send,
+    B: Send + std::marker::Sync,
 {
     type Rejection = (StatusCode, &'static str);
 
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(req: &mut Parts, _state: &B) -> Result<Self, Self::Rejection> {
         let result = get_profile_from_request(req).await;
         match result {
             Ok(profile) => Ok(DtzOptionalUser(Some(profile))),
@@ -94,10 +92,8 @@ where
     }
 }
 
-async fn get_profile_from_request<B>(
-    req: &mut RequestParts<B>,
-) -> Result<DtzProfile, &'static str> {
-    let headers = req.headers().clone();
+async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, &'static str> {
+    let headers = req.headers.clone();
     let cookie: Option<&HeaderValue> = headers.get("cookie");
     let authorization: Option<&HeaderValue> = headers.get("authorization");
     let header_api_key: Option<&HeaderValue> = headers.get("x-api-key");
@@ -136,7 +132,7 @@ async fn get_profile_from_request<B>(
         }
     } else {
         //look for GET params
-        let query = req.uri().query().unwrap_or_default();
+        let query = req.uri.query().unwrap_or_default();
         let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
         if value.api_key.is_some() {
             if value.context_id.is_some() {
@@ -201,9 +197,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 };
                 Ok(result)
             }
-            Err(_) => {
-                Err("invalid token".to_string())
-            }
+            Err(_) => Err("invalid token".to_string()),
         }
     } else {
         //deny

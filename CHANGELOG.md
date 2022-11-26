@@ -1,3 +1,7 @@
+# 0.6.0 2022-11-26
+
+* upgrade to axum 0.6
+
 # 0.5.0 2022-10-01
 
 * avoid const generic
