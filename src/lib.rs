@@ -8,17 +8,17 @@ use axum::{
 use cookie::Cookie;
 use hyper::body;
 use hyper::{Body, Client, Method, Request};
-use jwt::algorithm::VerifyingAlgorithm;
-use jwt::claims::Claims;
-use jwt::FromBase64;
-use jwt::PKeyWithDigest;
+use jwt_simple::prelude::{RS256PublicKey, RSAPublicKeyLike, NoCustomClaims, Base64UrlSafe};
+use jwt_simple::reexports::ct_codecs::Decoder;
 use lru_time_cache::LruCache;
 use once_cell::sync::Lazy;
-use openssl::hash::MessageDigest;
-use openssl::pkey::PKey;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::sync::Mutex;
 use uuid::Uuid;
+
+#[cfg(test)]
+mod test;
 
 /// public key used for JWT signature verification
 const PUBLIC_KEY: &str = r#"-----BEGIN PUBLIC KEY-----
@@ -172,31 +172,35 @@ fn verify_token_from_bearer(bearer: HeaderValue) -> Result<DtzProfile, String> {
 fn verify_token(token: String) -> Result<DtzProfile, String> {
     if token.as_str().contains('.') {
         let jwt_parts: Vec<&str> = token.split('.').collect();
-        let jwt_alg = jwt_parts.first().unwrap();
+        let _jwt_alg = jwt_parts.first().unwrap();
         let jwt_payload = jwt_parts.get(1).unwrap();
-        let jwt_sig = jwt_parts.get(2).unwrap();
-        let algorithm = PKeyWithDigest {
-            digest: MessageDigest::sha256(),
-            key: PKey::public_key_from_pem(PUBLIC_KEY.as_bytes()).unwrap(),
-        };
-        match algorithm.verify(jwt_alg, jwt_payload, jwt_sig) {
+        let _jwt_sig = jwt_parts.get(2).unwrap();
+        let public_key = RS256PublicKey::from_pem(PUBLIC_KEY).unwrap();
+        let claims = public_key.verify_token::<NoCustomClaims>(&token, None);
+        match claims {
             Ok(_) => {
-                let claims = Claims::from_base64(jwt_payload).unwrap();
-                let roles_claim = claims.private.get("roles").unwrap();
+                // get claims from json
+                let decoded = Base64UrlSafe::decode_to_vec(jwt_payload, None).unwrap();
+                let json_str = String::from_utf8_lossy(&decoded);
+                let json: Value = serde_json::de::from_str(&json_str).unwrap();
+                let roles_claim = json.get("roles").unwrap();
+                // let claims = Claims::from_base64(jwt_payload).unwrap();
+                // let roles_claim = claims.private.get("roles").unwrap();
                 let mut roles: Vec<String> = Vec::new();
                 let arr = roles_claim.as_array().unwrap();
                 for role in arr {
                     roles.push(role.as_str().unwrap().to_string());
                 }
-                let scope_str = claims.private.get("scope").unwrap().as_str().unwrap();
+                let scope_str = json.get("scope").unwrap().as_str().unwrap();
+                let subject_str = json.get("subject").unwrap().as_str().unwrap();
                 let result = DtzProfile {
-                    identity_id: Uuid::parse_str(&claims.registered.subject.unwrap()).unwrap(),
+                    identity_id: Uuid::parse_str(subject_str).unwrap(),
                     context_id: Uuid::parse_str(scope_str).unwrap(),
                     roles,
                     token,
                 };
                 Ok(result)
-            }
+            },
             Err(_) => Err("invalid token".to_string()),
         }
     } else {
@@ -297,49 +301,3 @@ pub fn verfify_context_role(profile: &DtzProfile, role: &str) -> bool {
     profile.roles.contains(&replaced_role)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use uuid::Uuid;
-    #[test]
-    fn test_replacement_identity() {
-        let identity = DtzProfile {
-            identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-            context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-            roles: vec!["admin".to_string()],
-            token: "".to_string(),
-        };
-        let result =
-            super::replace_placeholder("https://dtz.rocks/context/admin/{identity_id}", &identity);
-        assert_eq!(
-            result,
-            "https://dtz.rocks/context/admin/00000000-0000-0000-0000-000000000000"
-        );
-    }
-    #[test]
-    fn test_replacement_context() {
-        let identity = DtzProfile {
-            identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-            context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-            roles: vec!["admin".to_string()],
-            token: "".to_string(),
-        };
-        let result =
-            super::replace_placeholder("https://dtz.rocks/context/admin/{context_id}", &identity);
-        assert_eq!(
-            result,
-            "https://dtz.rocks/context/admin/00000000-0000-0000-0000-000000000000"
-        );
-    }
-    #[test]
-    fn test_replacement_nothing() {
-        let identity = DtzProfile {
-            identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-            context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-            roles: vec!["admin".to_string()],
-            token: "".to_string(),
-        };
-        let result = super::replace_placeholder("https://dtz.rocks/context/admin", &identity);
-        assert_eq!(result, "https://dtz.rocks/context/admin");
-    }
-}

@@ -1,3 +1,7 @@
+# 0.7.0 2023-04-06
+
+* remove openssl depedency
+
 # 0.6.1 2023-03-04
 
 * deps
