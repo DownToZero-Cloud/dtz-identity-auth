@@ -1,3 +1,7 @@
+# 0.7.1 2023-04-06
+
+* fix subject retrieval
+
 # 0.7.0 2023-04-06
 
 * remove openssl depedency

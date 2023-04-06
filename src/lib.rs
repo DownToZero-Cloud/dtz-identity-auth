@@ -192,7 +192,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                     roles.push(role.as_str().unwrap().to_string());
                 }
                 let scope_str = json.get("scope").unwrap().as_str().unwrap();
-                let subject_str = json.get("subject").unwrap().as_str().unwrap();
+                let subject_str = json.get("sub").unwrap().as_str().unwrap();
                 let result = DtzProfile {
                     identity_id: Uuid::parse_str(subject_str).unwrap(),
                     context_id: Uuid::parse_str(scope_str).unwrap(),
