@@ -260,6 +260,7 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
         .with_native_roots()
         .https_only()
         .enable_http1()
+        .enable_http2()
         .build();
     let http_client = Client::builder().build(https);
     let resp = http_client.request(req).await.unwrap();

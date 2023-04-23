@@ -1,3 +1,7 @@
+# 0.7.2 2023-04-23
+
+* allow http2
+
 # 0.7.1 2023-04-06
 
 * fix subject retrieval
