@@ -1,3 +1,7 @@
+# 0.7.3 2023-04-23
+
+* check for empty string on x-dtz-context
+
 # 0.7.2 2023-04-23
 
 * allow http2

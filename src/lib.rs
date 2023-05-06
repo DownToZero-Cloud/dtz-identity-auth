@@ -8,7 +8,7 @@ use axum::{
 use cookie::Cookie;
 use hyper::body;
 use hyper::{Body, Client, Method, Request};
-use jwt_simple::prelude::{RS256PublicKey, RSAPublicKeyLike, NoCustomClaims, Base64UrlSafe};
+use jwt_simple::prelude::{Base64UrlSafe, NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
 use jwt_simple::reexports::ct_codecs::Decoder;
 use lru_time_cache::LruCache;
 use once_cell::sync::Lazy;
@@ -118,13 +118,19 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, &'stati
             }
         }
     } else if let Some(header_api_key) = header_api_key {
-        if header_context_id.is_some() {
-            profile = verifiy_api_key(
-                header_api_key.to_str().unwrap(),
-                Some(header_context_id.unwrap().to_str().unwrap()),
-            )
-            .await
-            .unwrap();
+        if let Some(context_id) = header_context_id {
+            if context_id.is_empty() {
+                profile = verifiy_api_key(header_api_key.to_str().unwrap(), None)
+                    .await
+                    .unwrap();
+            } else {
+                profile = verifiy_api_key(
+                    header_api_key.to_str().unwrap(),
+                    Some(context_id.to_str().unwrap()),
+                )
+                .await
+                .unwrap();
+            }
         } else {
             profile = verifiy_api_key(header_api_key.to_str().unwrap(), None)
                 .await
@@ -200,7 +206,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                     token,
                 };
                 Ok(result)
-            },
+            }
             Err(_) => Err("invalid token".to_string()),
         }
     } else {
@@ -301,4 +307,3 @@ pub fn verfify_context_role(profile: &DtzProfile, role: &str) -> bool {
     let replaced_role = replace_placeholder(role, profile);
     profile.roles.contains(&replaced_role)
 }
-
