@@ -1,3 +1,7 @@
+# 0.7.4 2023-05-10
+
+* internally return String instead of &str
+
 # 0.7.3 2023-04-23
 
 * check for empty string on x-dtz-context

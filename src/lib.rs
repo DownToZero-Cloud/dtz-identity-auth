@@ -62,7 +62,7 @@ impl<B> FromRequestParts<B> for DtzRequiredUser
 where
     B: Send + std::marker::Sync,
 {
-    type Rejection = (StatusCode, &'static str);
+    type Rejection = (StatusCode, String);
 
     async fn from_request_parts(req: &mut Parts, _state: &B) -> Result<Self, Self::Rejection> {
         let result = get_profile_from_request(req).await;
@@ -81,7 +81,7 @@ impl<B> FromRequestParts<B> for DtzOptionalUser
 where
     B: Send + std::marker::Sync,
 {
-    type Rejection = (StatusCode, &'static str);
+    type Rejection = (StatusCode, String);
 
     async fn from_request_parts(req: &mut Parts, _state: &B) -> Result<Self, Self::Rejection> {
         let result = get_profile_from_request(req).await;
@@ -92,7 +92,7 @@ where
     }
 }
 
-async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, &'static str> {
+async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String> {
     let headers = req.headers.clone();
     let cookie: Option<&HeaderValue> = headers.get("cookie");
     let authorization: Option<&HeaderValue> = headers.get("authorization");
@@ -105,7 +105,7 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, &'stati
                 profile = p;
             }
             Err(_) => {
-                return Err("no valid token found in cookie");
+                return Err("no valid token found in cookie".to_string());
             }
         }
     } else if let Some(authorization) = authorization {
@@ -114,27 +114,22 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, &'stati
                 profile = p;
             }
             Err(_) => {
-                return Err("not authorized");
+                return Err("not authorized".to_string());
             }
         }
     } else if let Some(header_api_key) = header_api_key {
         if let Some(context_id) = header_context_id {
             if context_id.is_empty() {
-                profile = verifiy_api_key(header_api_key.to_str().unwrap(), None)
-                    .await
-                    .unwrap();
+                return verifiy_api_key(header_api_key.to_str().unwrap(), None).await;
             } else {
-                profile = verifiy_api_key(
+                return verifiy_api_key(
                     header_api_key.to_str().unwrap(),
                     Some(context_id.to_str().unwrap()),
                 )
-                .await
-                .unwrap();
+                .await;
             }
         } else {
-            profile = verifiy_api_key(header_api_key.to_str().unwrap(), None)
-                .await
-                .unwrap();
+            return verifiy_api_key(header_api_key.to_str().unwrap(), None).await;
         }
     } else {
         //look for GET params
@@ -142,17 +137,13 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, &'stati
         let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
         if value.api_key.is_some() {
             if value.context_id.is_some() {
-                profile =
-                    verifiy_api_key(&value.api_key.unwrap(), Some(&value.context_id.unwrap()))
-                        .await
-                        .unwrap();
+                return verifiy_api_key(&value.api_key.unwrap(), Some(&value.context_id.unwrap()))
+                    .await;
             } else {
-                profile = verifiy_api_key(&value.api_key.unwrap(), None)
-                    .await
-                    .unwrap();
+                return verifiy_api_key(&value.api_key.unwrap(), None).await;
             }
         } else {
-            return Err("no authorization header");
+            return Err("no authorization header".to_string());
         }
     }
     Ok(profile)
