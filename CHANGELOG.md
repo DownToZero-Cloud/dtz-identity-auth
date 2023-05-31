@@ -1,3 +1,7 @@
+# 0.7.5 2023-05-31
+
+* use unpadded Base64 for JWT decode
+
 # 0.7.4 2023-05-10
 
 * internally return String instead of &str

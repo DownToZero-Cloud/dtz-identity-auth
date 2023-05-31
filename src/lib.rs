@@ -5,11 +5,11 @@ use axum::{
     async_trait, extract::FromRequestParts, http::header::HeaderValue, http::request::Parts,
     http::StatusCode,
 };
+use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
 use hyper::body;
 use hyper::{Body, Client, Method, Request};
-use jwt_simple::prelude::{Base64UrlSafe, NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
-use jwt_simple::reexports::ct_codecs::Decoder;
+use jwt_simple::prelude::{NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
 use lru_time_cache::LruCache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -177,7 +177,9 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
         match claims {
             Ok(_) => {
                 // get claims from json
-                let decoded = Base64UrlSafe::decode_to_vec(jwt_payload, None).unwrap();
+                let decoded = general_purpose::STANDARD_NO_PAD
+                    .decode(jwt_payload)
+                    .unwrap();
                 let json_str = String::from_utf8_lossy(&decoded);
                 let json: Value = serde_json::de::from_str(&json_str).unwrap();
                 let roles_claim = json.get("roles").unwrap();
