@@ -1,3 +1,7 @@
+# 0.7.6 2023-12-16
+
+* update to axum 0.7
+
 # 0.7.5 2023-05-31
 
 * use unpadded Base64 for JWT decode

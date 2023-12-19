@@ -8,7 +8,7 @@ use axum::{
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
 use hyper::body;
-use hyper::{Body, Client, Method, Request};
+use hyper::{Client, Method, Request};
 use jwt_simple::prelude::{NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
 use lru_time_cache::LruCache;
 use once_cell::sync::Lazy;
@@ -253,7 +253,7 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
         .uri("https://identity.dtz.rocks/api/2021-02-21/auth/apikey")
         .header("content-type", "application/json")
         .header("X-DTZ-SOURCE", hostname)
-        .body(Body::from(req_data.clone()))
+        .body(req_data.clone())
         .unwrap();
     let https = hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
