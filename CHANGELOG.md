@@ -1,3 +1,7 @@
+# 0.7.7 2023-12-26
+
+* remove boring dependency
+
 # 0.7.6 2023-12-16
 
 * update to axum 0.7
