@@ -109,13 +109,27 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
             }
         }
     } else if let Some(authorization) = authorization {
-        match verify_token_from_bearer(authorization.clone()) {
-            Ok(p) => {
-                profile = p;
+        let auth_str = authorization.to_str().unwrap();
+        if auth_str.starts_with("Basic ") {
+            match verify_basic_auth(authorization).await {
+                Ok(p) => {
+                    profile = p;
+                }
+                Err(_) => {
+                    return Err("not authorized".to_string());
+                }
             }
-            Err(_) => {
-                return Err("not authorized".to_string());
+        } else if auth_str.starts_with("Bearer ") {
+            match verify_token_from_bearer(authorization.clone()) {
+                Ok(p) => {
+                    profile = p;
+                }
+                Err(_) => {
+                    return Err("not authorized".to_string());
+                }
             }
+        } else {
+            return Err("not authorized".to_string());
         }
     } else if let Some(header_api_key) = header_api_key {
         if let Some(context_id) = header_context_id {
@@ -157,6 +171,29 @@ fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile, String> {
             verify_token(token)
         }
         Err(_) => Err("no valid token found in cookie".to_string()),
+    }
+}
+
+async fn verify_basic_auth(bearer: &HeaderValue) -> Result<DtzProfile, String> {
+    let bearer_str = bearer.to_str().unwrap();
+    let b64 = bearer_str.replace("Basic ", "");
+    let decoded = general_purpose::STANDARD.decode(b64).unwrap();
+    let str = String::from_utf8_lossy(&decoded);
+    let parts: Vec<&str> = str.split(':').collect();
+    let cred_type = parts.first().unwrap_or(&"");
+    match *cred_type {
+        "apikey" => {
+            let password = parts.get(1).unwrap_or(&"");
+            verifiy_api_key(password, None).await
+        }
+        "bearer" => {
+            let token = parts.get(1).unwrap_or(&"");
+            verify_token(token.to_string())
+        }
+        _ => Err(
+            "invalid crendential type, please use the `user` to a valid value, e.g. apikey, bearer"
+                .to_string(),
+        ),
     }
 }
 

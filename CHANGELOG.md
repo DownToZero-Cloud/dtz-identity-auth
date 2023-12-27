@@ -1,3 +1,7 @@
+# 0.7.8 2023-12-27
+
+* allow basic auth for authentication
+
 # 0.7.7 2023-12-26
 
 * remove boring dependency

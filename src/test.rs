@@ -125,3 +125,16 @@ fn test_b64_2() {
     let str = String::from_utf8_lossy(&decoded);
     println!("{str}");
 }
+
+#[test]
+fn test_b64_basic_auth() {
+    let b64 = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
+    use base64::{engine::general_purpose, Engine as _};
+
+    let decoded = general_purpose::STANDARD.decode(b64).unwrap();
+    let str = String::from_utf8_lossy(&decoded);
+    let parts: Vec<&str> = str.split(':').collect();
+    println!("{parts:?}");
+    assert_eq!(parts[0], "Aladdin");
+    assert_eq!(parts[1], "open sesame");
+}
