@@ -1,3 +1,7 @@
+# 0.7.9 2024-01-08
+
+* deps
+
 # 0.7.8 2023-12-27
 
 * allow basic auth for authentication
