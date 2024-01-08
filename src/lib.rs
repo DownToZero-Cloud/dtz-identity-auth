@@ -294,6 +294,7 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
         .unwrap();
     let https = hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
+        .unwrap()
         .https_only()
         .enable_http1()
         .enable_http2()
