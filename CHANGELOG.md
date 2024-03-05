@@ -1,3 +1,8 @@
+# 1.0.0 2024-02-28
+
+* update to hyper 1
+* add MSRV (minimum supported rust version)
+
 # 0.7.9 2024-01-08
 
 * deps

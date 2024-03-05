@@ -7,14 +7,15 @@ use axum::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
-use hyper::body;
-use hyper::{Client, Method, Request};
+use http_body_util::BodyExt;
+use hyper::{Method, Request};
+use hyper_util::{client::legacy::Client, rt::TokioExecutor};
 use jwt_simple::prelude::{NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
 use lru_time_cache::LruCache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Mutex;
+use std::{sync::Mutex, time::Duration};
 use uuid::Uuid;
 
 #[cfg(test)]
@@ -260,21 +261,20 @@ struct GetAuthParams {
     context_id: Option<String>,
 }
 
+static ONE_HOUR: Duration = Duration::from_secs(3600);
 static KNOWN_IDENTITIES: Lazy<Mutex<LruCache<String, DtzProfile>>> = Lazy::new(|| {
-    let time_to_live = std::time::Duration::from_secs(3600);
-    let m = LruCache::<String, DtzProfile>::with_expiry_duration_and_capacity(time_to_live, 100);
+    let m = LruCache::<String, DtzProfile>::with_expiry_duration_and_capacity(ONE_HOUR, 100);
     Mutex::new(m)
 });
 
 async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzProfile, String> {
     let req_data = if context_id.is_some() {
-        format!(
-            "{{\"apiKey\":\"{}\",\"contextId\":\"{}\"}}",
-            api_key,
-            context_id.unwrap()
-        )
+        serde_json::json!(
+            {"apiKey":api_key,
+             "contextId":context_id})
+        .to_string()
     } else {
-        format!("{{\"apiKey\":\"{}\"}}", api_key)
+        serde_json::json!({"apiKey":api_key}).to_string()
     };
     {
         let mut x = KNOWN_IDENTITIES.lock().unwrap();
@@ -299,10 +299,15 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
         .enable_http1()
         .enable_http2()
         .build();
-    let http_client = Client::builder().build(https);
+    let http_client = Client::builder(TokioExecutor::new()).build(https);
     let resp = http_client.request(req).await.unwrap();
     if resp.status().is_success() {
-        let bytes = body::to_bytes(resp.into_body()).await.unwrap();
+        let bytes = resp
+            .into_body()
+            .collect()
+            .await
+            .expect("reading http response")
+            .to_bytes();
         let resp_str = String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
         let token_response: TokenResponse = serde_json::from_str(&resp_str).unwrap();
         let jwt = token_response.access_token;
