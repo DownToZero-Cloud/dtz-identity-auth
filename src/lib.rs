@@ -300,28 +300,34 @@ async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzP
         .enable_http2()
         .build();
     let http_client = Client::builder(TokioExecutor::new()).build(https);
-    let resp = http_client.request(req).await.unwrap();
-    if resp.status().is_success() {
-        let bytes = resp
-            .into_body()
-            .collect()
-            .await
-            .expect("reading http response")
-            .to_bytes();
-        let resp_str = String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
-        let token_response: TokenResponse = serde_json::from_str(&resp_str).unwrap();
-        let jwt = token_response.access_token;
-        let result = verify_token(jwt);
-        //add to cache
-        {
-            if result.is_ok() {
-                let mut x = KNOWN_IDENTITIES.lock().unwrap();
-                x.insert(req_data, result.clone().unwrap());
+    let resp = http_client.request(req).await;
+    match resp {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let bytes = resp
+                    .into_body()
+                    .collect()
+                    .await
+                    .expect("reading http response")
+                    .to_bytes();
+                let resp_str =
+                    String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
+                let token_response: TokenResponse = serde_json::from_str(&resp_str).unwrap();
+                let jwt = token_response.access_token;
+                let result = verify_token(jwt);
+                //add to cache
+                {
+                    if result.is_ok() {
+                        let mut x = KNOWN_IDENTITIES.lock().unwrap();
+                        x.insert(req_data, result.clone().unwrap());
+                    }
+                }
+                result
+            } else {
+                Err("not authorized".to_string())
             }
         }
-        result
-    } else {
-        Err("not authorized".to_string())
+        Err(_err) => Err("not authorized".to_string()),
     }
 }
 

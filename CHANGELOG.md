@@ -1,3 +1,7 @@
+# 1.0.1 2024-03-21
+
+* fail authentication if backend is ont available
+
 # 1.0.0 2024-02-28
 
 * update to hyper 1
