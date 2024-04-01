@@ -25,6 +25,10 @@ jobs:
       with:
         command: test
         args: -q
+    - name: Cargo MSRV
+      run: |
+        cargo install cargo-msrv --no-default-features
+        cargo msrv verify
     - name: merge
       if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
       run: |
