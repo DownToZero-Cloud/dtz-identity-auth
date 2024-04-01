@@ -1,0 +1,33 @@
+name: pr
+on:
+  workflow_dispatch:
+  pull_request:
+jobs:
+  build:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: clippy
+    - name: Run rustfmt
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+    - name: Run clippy
+      run: cargo clippy --all -- -D warnings
+    - name: Cargo Test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -q
+    - name: merge
+      if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
+      run: |
+        gh pr merge --merge $GITHUB_HEAD_REF
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
