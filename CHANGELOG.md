@@ -1,3 +1,7 @@
+# 1.0.2 2024-04-01
+
+* deps
+
 # 1.0.1 2024-03-21
 
 * fail authentication if backend is ont available
