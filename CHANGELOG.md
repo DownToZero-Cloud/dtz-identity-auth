@@ -1,3 +1,7 @@
+# 1.0.3 2024-04-17
+
+* support multiple cookies
+
 # 1.0.2 2024-04-01
 
 * deps

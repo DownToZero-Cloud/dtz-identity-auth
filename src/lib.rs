@@ -166,12 +166,18 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
 
 fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile, String> {
     let cookie_str = cookie.to_str().unwrap();
-    match Cookie::parse(cookie_str) {
-        Ok(cookie) => {
-            let token = cookie.value().to_string();
-            verify_token(token)
+    let mut final_cookie = None;
+    for cookie in Cookie::split_parse(cookie_str) {
+        let cookie = cookie.unwrap();
+        if cookie.name() =="dtz-auth"{
+            let c = cookie.value().to_string();
+             final_cookie=Some(c);
         }
-        Err(_) => Err("no valid token found in cookie".to_string()),
+    }
+    if let Some(token) = final_cookie {
+        crate::verify_token(token.to_string())
+    }else{
+        Err("no valid token found in cookie".to_string())
     }
 }
 

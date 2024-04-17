@@ -138,3 +138,23 @@ fn test_b64_basic_auth() {
     assert_eq!(parts[0], "Aladdin");
     assert_eq!(parts[1], "open sesame");
 }
+
+#[test]
+fn multiple_cookies() {
+    let cookie_str = "ph_phc_Tbfg4EiRsr5iefFoth2Y1Hi3sttTeLQ5RV5TLg4hL1W_posthog=%7B%22distinct_id%22%3A%2218eeb867e3f2227-01a05f116afd35-1c525637-384000-18eeb867e4048f2%22%2C%22%24device_id%22%3A%2218eeb867e3f2227-01a05f116afd35-1c525637-384000-18eeb867e4048f2%22%2C%22%24user_state%22%3A%22anonymous%22%2C%22%24sesid%22%3A%5B1713349513245%2C%2218eeb867eb51c05-014402dc1a36-1c525637-384000-18eeb867eb65080%22%2C1713348443829%5D%2C%22%24session_recording_enabled_server_side%22%3Afalse%2C%22%24autocapture_disabled_server_side%22%3Afalse%2C%22%24active_feature_flags%22%3A%5B%5D%2C%22%24enabled_feature_flags%22%3A%7B%7D%2C%22%24feature_flag_payloads%22%3A%7B%7D%7D; dtz-auth=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImR0ejEifQ.eyJpc3MiOiJkdHoucm9ja3MiLCJzdWIiOiIwMDAwMDAwMC1kZDIzLTQ2NTUtYTQ3MS01MjY1M2ExMGQxNWYiLCJhdWQiOiJkdHoucm9ja3MiLCJzY29wZSI6IjAwMDAwMDAwLTJlMGQtNDNhMS1hOTJjLTU0NTQ2YWQ1YjFmYiIsInJvbGVzIjpbImh0dHBzOi8vZHR6LnJvY2tzL2lkZW50aXR5L2FkbWluLzAwMDAwMDAwLWUyN2ItNDcwOC1hMTcxLTg2OTBkOGYxMmFmZSJdLCJjb250ZXh0cyI6WyIwMDAwMDAwMC03N2I2LTQ2YmYtODU4Yi01OGRiMjI4NjdlYWQiXSwiZXhwIjoxNzEzNDMxMjAxLCJpYXQiOjE3MTMzNDQ4MDF9.PYbsoDYdMg-kv0b5iqMV1QqTT2IG38HWc_YarzlXR5kXgWCaH6wm24xDz8G6-QQENvaZ0uLNOz6YZh6mX7a5bi4-_m9CXysmJJ4i2wP9kfjXdprSmqefYpVkAOljOoCHSIGhsuyOd5PZH0YBM5q-dMgBbEp00oLz9YDL_yQ9zwKUuePYu6Z53FgIA26WwxzSTMook7XkATtc7Cl7ktSHP_ieUWWT_RyU3eOIPmCrpTv4jFyg0sh-ylG3qeKl2utEC4ZzjzJ8av_e29Q74n_H29LOnWVAThhZ9qXkGAxP0CCQuJm0Ig0RuxKQ4qfLE0PYIZ2XIKNIpIurWOEGl1Zv2w";
+    let cookie = HeaderValue::from_static(cookie_str);
+    let result = crate::verify_token_from_cookie(cookie);
+    println!("{result:?}");
+    assert!(result.is_err());
+    match result {
+        Err(msg) => {
+            if msg == "invalid token" {
+                // signature is wrong, but jwt could be read
+                assert!(true)
+            } else {
+                assert!(false)
+            }
+        }
+        _ => assert!(false),
+    }
+}
