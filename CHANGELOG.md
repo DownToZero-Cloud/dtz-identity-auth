@@ -1,3 +1,7 @@
+# 1.0.4 2024-05-29
+
+* implement get_profile from bearer token
+
 # 1.0.3 2024-04-17
 
 * support multiple cookies

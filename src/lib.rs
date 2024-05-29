@@ -169,14 +169,14 @@ fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile, String> {
     let mut final_cookie = None;
     for cookie in Cookie::split_parse(cookie_str) {
         let cookie = cookie.unwrap();
-        if cookie.name() =="dtz-auth"{
+        if cookie.name() == "dtz-auth" {
             let c = cookie.value().to_string();
-             final_cookie=Some(c);
+            final_cookie = Some(c);
         }
     }
     if let Some(token) = final_cookie {
         crate::verify_token(token.to_string())
-    }else{
+    } else {
         Err("no valid token found in cookie".to_string())
     }
 }
@@ -202,6 +202,12 @@ async fn verify_basic_auth(bearer: &HeaderValue) -> Result<DtzProfile, String> {
                 .to_string(),
         ),
     }
+}
+
+/// retrieve the profile information from a bearer token
+pub fn get_profile_from_bearer(bearer: impl Into<String>) -> Result<DtzProfile, String> {
+    let bearer_str = bearer.into();
+    verify_token(bearer_str)
 }
 
 fn verify_token_from_bearer(bearer: HeaderValue) -> Result<DtzProfile, String> {
