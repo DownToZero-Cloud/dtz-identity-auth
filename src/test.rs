@@ -8,8 +8,12 @@ use uuid::Uuid;
 #[test]
 fn test_replacement_identity() {
     let identity = DtzProfile {
-        identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-        context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        identity_id: IdentityId {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        },
+        context_id: ContextId {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        },
         roles: vec!["admin".to_string()],
         token: "".to_string(),
     };
@@ -23,8 +27,12 @@ fn test_replacement_identity() {
 #[test]
 fn test_replacement_context() {
     let identity = DtzProfile {
-        identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-        context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        identity_id: IdentityId {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        },
+        context_id: ContextId {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        },
         roles: vec!["admin".to_string()],
         token: "".to_string(),
     };
@@ -38,8 +46,12 @@ fn test_replacement_context() {
 #[test]
 fn test_replacement_nothing() {
     let identity = DtzProfile {
-        identity_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
-        context_id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        identity_id: IdentityId {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        },
+        context_id: ContextId {
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+        },
         roles: vec!["admin".to_string()],
         token: "".to_string(),
     };

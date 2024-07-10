@@ -1,3 +1,7 @@
+# 1.0.5 2024-07-10
+
+* use DTZ specific identifier instead of generic Uuids
+
 # 1.0.4 2024-05-29
 
 * implement get_profile from bearer token

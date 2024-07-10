@@ -7,6 +7,7 @@ use axum::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
+use dtz::id::{ContextId, IdentityId};
 use http_body_util::BodyExt;
 use hyper::{Method, Request};
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};
@@ -36,9 +37,9 @@ KQIDAQAB
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct DtzProfile {
     /// Identifier of the user
-    pub identity_id: Uuid,
+    pub identity_id: IdentityId,
     /// current context of the authnetication
-    pub context_id: Uuid,
+    pub context_id: ContextId,
     /// available roles granted to the user
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub roles: Vec<String>,
@@ -243,8 +244,12 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 let scope_str = json.get("scope").unwrap().as_str().unwrap();
                 let subject_str = json.get("sub").unwrap().as_str().unwrap();
                 let result = DtzProfile {
-                    identity_id: Uuid::parse_str(subject_str).unwrap(),
-                    context_id: Uuid::parse_str(scope_str).unwrap(),
+                    identity_id: IdentityId {
+                        id: Uuid::parse_str(subject_str).unwrap(),
+                    },
+                    context_id: ContextId {
+                        id: Uuid::parse_str(scope_str).unwrap(),
+                    },
                     roles,
                     token,
                 };
