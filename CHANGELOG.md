@@ -1,3 +1,7 @@
+# 1.0.6 2024-07-10
+
+* deps
+
 # 1.0.5 2024-07-10
 
 * use DTZ specific identifier instead of generic Uuids
