@@ -7,7 +7,7 @@ use axum::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
-use dtz::id::{ContextId, IdentityId};
+use dtz_identifier::{ContextId, IdentityId};
 use http_body_util::BodyExt;
 use hyper::{Method, Request};
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};

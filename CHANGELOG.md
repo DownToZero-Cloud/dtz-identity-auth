@@ -1,3 +1,7 @@
+# 1.0.7 2024-07-11
+
+* refactor idenfiers into its own crate
+
 # 1.0.6 2024-07-10
 
 * deps
