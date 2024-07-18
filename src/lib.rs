@@ -7,7 +7,7 @@ use axum::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
-use dtz_identifier::{ContextId, IdentityId};
+use dtz_identifier::{ApiKeyId, ContextId, IdentityId};
 use http_body_util::BodyExt;
 use hyper::{Method, Request};
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};
@@ -136,16 +136,30 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
     } else if let Some(header_api_key) = header_api_key {
         if let Some(context_id) = header_context_id {
             if context_id.is_empty() {
-                return verifiy_api_key(header_api_key.to_str().unwrap(), None).await;
+                let result = ApiKeyId::try_from(header_api_key.to_str().unwrap());
+                return match result {
+                    Ok(key) => verifiy_api_key(&key, None).await,
+                    Err(err) => Err(err),
+                };
             } else {
-                return verifiy_api_key(
-                    header_api_key.to_str().unwrap(),
-                    Some(context_id.to_str().unwrap()),
-                )
-                .await;
+                let api_key = ApiKeyId::try_from(header_api_key.to_str().unwrap());
+                let context_id = ContextId::try_from(context_id.to_str().unwrap());
+                match (api_key, context_id) {
+                    (Ok(api_key), Ok(context_id)) => {
+                        return verifiy_api_key(&api_key, Some(&context_id)).await;
+                    }
+                    _ => {
+                        //fail
+                        return Err("not authorized".to_string());
+                    }
+                }
             }
         } else {
-            return verifiy_api_key(header_api_key.to_str().unwrap(), None).await;
+            let result = ApiKeyId::try_from(header_api_key.to_str().unwrap());
+            return match result {
+                Ok(key) => verifiy_api_key(&key, None).await,
+                Err(err) => Err(err),
+            };
         }
     } else {
         //look for GET params
@@ -153,10 +167,23 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
         let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
         if value.api_key.is_some() {
             if value.context_id.is_some() {
-                return verifiy_api_key(&value.api_key.unwrap(), Some(&value.context_id.unwrap()))
-                    .await;
+                let result = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
+                return match result {
+                    Ok(key) => verifiy_api_key(&key, None).await,
+                    Err(err) => Err(err),
+                };
             } else {
-                return verifiy_api_key(&value.api_key.unwrap(), None).await;
+                let api_key = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
+                let context_id = ContextId::try_from(value.context_id.unwrap_or_default().as_str());
+                match (api_key, context_id) {
+                    (Ok(api_key), Ok(context_id)) => {
+                        return verifiy_api_key(&api_key, Some(&context_id)).await;
+                    }
+                    _ => {
+                        //fail
+                        return Err("not authorized".to_string());
+                    }
+                }
             }
         } else {
             return Err("no authorization header".to_string());
@@ -192,7 +219,11 @@ async fn verify_basic_auth(bearer: &HeaderValue) -> Result<DtzProfile, String> {
     match *cred_type {
         "apikey" => {
             let password = parts.get(1).unwrap_or(&"");
-            verifiy_api_key(password, None).await
+            let result = ApiKeyId::try_from(*password);
+            match result {
+                Ok(key) => verifiy_api_key(&key, None).await,
+                Err(err) => Err(err),
+            }
         }
         "bearer" => {
             let token = parts.get(1).unwrap_or(&"");
@@ -284,7 +315,10 @@ static KNOWN_IDENTITIES: Lazy<Mutex<LruCache<String, DtzProfile>>> = Lazy::new(|
     Mutex::new(m)
 });
 
-async fn verifiy_api_key(api_key: &str, context_id: Option<&str>) -> Result<DtzProfile, String> {
+async fn verifiy_api_key(
+    api_key: &ApiKeyId,
+    context_id: Option<&ContextId>,
+) -> Result<DtzProfile, String> {
     let req_data = if context_id.is_some() {
         serde_json::json!(
             {"apiKey":api_key,
