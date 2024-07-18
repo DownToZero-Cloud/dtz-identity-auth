@@ -1,6 +1,10 @@
+# 1.1.0 2024-07-18
+
+* incorporate more identifier (dtz-identifier)
+
 # 1.0.7 2024-07-11
 
-* refactor idenfiers into its own crate
+* refactor identifiers into its own crate
 
 # 1.0.6 2024-07-10
 
