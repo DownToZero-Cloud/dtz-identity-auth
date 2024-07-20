@@ -274,13 +274,27 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 }
                 let scope_str = json.get("scope").unwrap().as_str().unwrap();
                 let subject_str = json.get("sub").unwrap().as_str().unwrap();
+                let identity = match IdentityId::try_from(subject_str) {
+                    Ok(id) => id,
+                    Err(_err) => match Uuid::parse_str(subject_str) {
+                        Ok(id) => IdentityId::from(id),
+                        Err(_err) => {
+                            return Err("invalid token".to_string());
+                        }
+                    },
+                };
+                let context = match ContextId::try_from(scope_str) {
+                    Ok(id) => id,
+                    Err(_err) => match Uuid::parse_str(scope_str) {
+                        Ok(id) => ContextId::from(id),
+                        Err(_err) => {
+                            return Err("invalid token".to_string());
+                        }
+                    },
+                };
                 let result = DtzProfile {
-                    identity_id: IdentityId {
-                        id: Uuid::parse_str(subject_str).unwrap(),
-                    },
-                    context_id: ContextId {
-                        id: Uuid::parse_str(scope_str).unwrap(),
-                    },
+                    identity_id:  identity,
+                    context_id: context,
                     roles,
                     token,
                 };
