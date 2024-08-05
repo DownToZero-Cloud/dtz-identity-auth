@@ -1,3 +1,7 @@
+# 1.1.2 2024-08-05
+
+* fix query param auth
+
 # 1.1.0 2024-07-18
 
 * incorporate more identifier (dtz-identifier)

@@ -166,7 +166,7 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
         let query = req.uri.query().unwrap_or_default();
         let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
         if value.api_key.is_some() {
-            if value.context_id.is_some() {
+            if value.context_id.is_none() {
                 let result = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
                 return match result {
                     Ok(key) => verifiy_api_key(&key, None).await,
@@ -293,7 +293,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                     },
                 };
                 let result = DtzProfile {
-                    identity_id:  identity,
+                    identity_id: identity,
                     context_id: context,
                     roles,
                     token,

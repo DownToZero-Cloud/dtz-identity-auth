@@ -21,7 +21,7 @@ fn test_replacement_identity() {
         super::replace_placeholder("https://dtz.rocks/context/admin/{identity_id}", &identity);
     assert_eq!(
         result,
-        "https://dtz.rocks/context/admin/00000000-0000-0000-0000-000000000000"
+        "https://dtz.rocks/context/admin/identity-00000000-0000-0000-0000-000000000000"
     );
 }
 #[test]
@@ -40,7 +40,7 @@ fn test_replacement_context() {
         super::replace_placeholder("https://dtz.rocks/context/admin/{context_id}", &identity);
     assert_eq!(
         result,
-        "https://dtz.rocks/context/admin/00000000-0000-0000-0000-000000000000"
+        "https://dtz.rocks/context/admin/context-00000000-0000-0000-0000-000000000000"
     );
 }
 #[test]
