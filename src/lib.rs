@@ -165,31 +165,35 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
         //look for GET params
         let query = req.uri.query().unwrap_or_default();
         let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
-        if value.api_key.is_some() {
-            if value.context_id.is_none() {
-                let result = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
-                return match result {
-                    Ok(key) => verifiy_api_key(&key, None).await,
-                    Err(err) => Err(err),
-                };
-            } else {
-                let api_key = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
-                let context_id = ContextId::try_from(value.context_id.unwrap_or_default().as_str());
-                match (api_key, context_id) {
-                    (Ok(api_key), Ok(context_id)) => {
-                        return verifiy_api_key(&api_key, Some(&context_id)).await;
-                    }
-                    _ => {
-                        //fail
-                        return Err("not authorized".to_string());
-                    }
-                }
-            }
-        } else {
-            return Err("no authorization header".to_string());
-        }
+        return verify_query_params(value).await;
     }
     Ok(profile)
+}
+
+async fn verify_query_params(value: GetAuthParams) -> Result<DtzProfile, String> {
+    if value.api_key.is_some() {
+        if value.context_id.is_none() {
+            let result = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
+            match result {
+                Ok(key) => verifiy_api_key(&key, None).await,
+                Err(err) => Err(err),
+            }
+        } else {
+            let api_key = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
+            let context_id = ContextId::try_from(value.context_id.unwrap_or_default().as_str());
+            match (api_key, context_id) {
+                (Ok(api_key), Ok(context_id)) => {
+                    verifiy_api_key(&api_key, Some(&context_id)).await
+                }
+                _ => {
+                    //fail
+                    Err("not authorized".to_string())
+                }
+            }
+        }
+    } else {
+        Err("no authorization header".to_string())
+    }
 }
 
 fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile, String> {

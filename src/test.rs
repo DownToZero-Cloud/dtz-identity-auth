@@ -173,7 +173,7 @@ fn multiple_cookies() {
 }
 
 #[test]
-fn test_api_key_url(){
+fn test_api_key_url() {
     let url = "https://billing.dtz.rocks/api/2022-12-28/charge/stripe?apiKey=apikey-00000000-0000-0000-0000-000000000000";
     let uri = Uri::from_static(url);
     let query = uri.query().unwrap_or_default();
@@ -181,4 +181,26 @@ fn test_api_key_url(){
     println!("{value:?}");
     assert!(value.api_key.is_some());
     assert!(value.context_id.is_none());
+}
+
+#[test]
+fn test_api_key_with_ctx_url() {
+    let url = "https://billing.dtz.rocks/api/2022-12-28/charge/stripe?apiKey=apikey-00000000-0000-0000-0000-000000000000&contextId=context-00000000-0000-0000-0000-000000000000";
+    let uri = Uri::from_static(url);
+    let query = uri.query().unwrap_or_default();
+    let value: GetAuthParams = serde_urlencoded::from_str(query).unwrap();
+    println!("{value:?}");
+    assert!(value.api_key.is_some());
+    assert!(value.context_id.is_some());
+}
+
+#[tokio::test]
+async fn test_get_params_ok() {
+    let val = GetAuthParams {
+        api_key: Some("".to_string()),
+        context_id: Some("".to_string()),
+    };
+    let result = verify_query_params(val).await;
+    println!("{result:?}");
+    assert!(result.is_err());
 }

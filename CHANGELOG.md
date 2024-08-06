@@ -1,3 +1,7 @@
+# 1.1.3 2024-*-*
+
+* minor refactoring of get-parameter parsing
+
 # 1.1.2 2024-08-05
 
 * fix query param auth
