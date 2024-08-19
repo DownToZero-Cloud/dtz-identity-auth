@@ -1,4 +1,5 @@
 use super::*;
+use axum::{routing::get, Router};
 use hyper::Uri;
 use jwt_simple::{
     prelude::{NoCustomClaims, RS256PublicKey, RSAPublicKeyLike},
@@ -203,4 +204,25 @@ async fn test_get_params_ok() {
     let result = verify_query_params(val).await;
     println!("{result:?}");
     assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn unauthorized_on_empty_header() {
+    let app = Router::new().route(
+        "/",
+        get(|DtzRequiredUser(profile): DtzRequiredUser| async move { format!("{:?}", profile) }),
+    );
+    let addr = format!("127.0.0.1:3000");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+            })
+            .await
+            .unwrap();
+    });
+    let resp = reqwest::get("http://127.0.0.1:3000").await.unwrap();
+    println!("{resp:?}");
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }

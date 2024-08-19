@@ -182,9 +182,7 @@ async fn verify_query_params(value: GetAuthParams) -> Result<DtzProfile, String>
             let api_key = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
             let context_id = ContextId::try_from(value.context_id.unwrap_or_default().as_str());
             match (api_key, context_id) {
-                (Ok(api_key), Ok(context_id)) => {
-                    verifiy_api_key(&api_key, Some(&context_id)).await
-                }
+                (Ok(api_key), Ok(context_id)) => verifiy_api_key(&api_key, Some(&context_id)).await,
                 _ => {
                     //fail
                     Err("not authorized".to_string())
