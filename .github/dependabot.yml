@@ -7,11 +7,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-     
+      day: "friday"
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "friday"
     ignore:
         - dependency-name: "semver"
         - dependency-name: "crates-io"
