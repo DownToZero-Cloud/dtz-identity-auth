@@ -1,6 +1,7 @@
-# 1.1.3 2024-*-*
+# 1.1.3 2024-12-04
 
 * minor refactoring of get-parameter parsing
+* append ensure_role to DtzOptionalUser and DtzRequiredUser for more convenience
 
 # 1.1.2 2024-08-05
 

@@ -2,8 +2,11 @@
 
 //! crate to provide trait for easier implementation of user profiles within [DownToZero.cloud](https://downtozero.cloud)
 use axum::{
-    async_trait, extract::FromRequestParts, http::header::HeaderValue, http::request::Parts,
-    http::StatusCode,
+    async_trait,
+    body::Body,
+    extract::FromRequestParts,
+    http::{header::HeaderValue, request::Parts, StatusCode},
+    response::Response,
 };
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
@@ -50,6 +53,20 @@ pub struct DtzProfile {
 /// struct to hold an authenticated user profile
 pub struct DtzRequiredUser(pub DtzProfile);
 
+impl DtzRequiredUser {
+    /// checks for the required role, or answers with an http-401 (unauthorized)
+    pub fn ensure_role(&self, required_role: &str) -> Result<DtzProfile, Response> {
+        if self.0.require(required_role) {
+            Ok(self.0.clone())
+        } else {
+            Err(Response::builder()
+                .status(StatusCode::UNAUTHORIZED)
+                .body(Body::empty())
+                .unwrap())
+        }
+    }
+}
+
 impl DtzProfile {
     /// checks the profile for the required scope
     #[allow(dead_code)]
@@ -77,6 +94,28 @@ where
 
 /// struct to hold a user profile, if a user is authenticated
 pub struct DtzOptionalUser(pub Option<DtzProfile>);
+
+impl DtzOptionalUser {
+    /// checks for the required role, or answers with an http-401 (unauthorized)
+    pub fn ensure_role(&self, required_role: &str) -> Result<DtzProfile, Response> {
+        match &self.0 {
+            Some(profile) => {
+                if profile.require(required_role) {
+                    Ok(profile.clone())
+                } else {
+                    Err(Response::builder()
+                        .status(StatusCode::UNAUTHORIZED)
+                        .body(Body::empty())
+                        .unwrap())
+                }
+            }
+            None => Err(Response::builder()
+                .status(StatusCode::UNAUTHORIZED)
+                .body(Body::empty())
+                .unwrap()),
+        }
+    }
+}
 
 #[async_trait]
 impl<B> FromRequestParts<B> for DtzOptionalUser
