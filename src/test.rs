@@ -7,6 +7,7 @@ use jwt_simple::{
 };
 use serde_json::Value;
 use uuid::Uuid;
+
 #[test]
 fn test_replacement_identity() {
     let identity = DtzProfile {
@@ -210,7 +211,7 @@ async fn test_get_params_ok() {
 async fn unauthorized_on_empty_header() {
     let app = Router::new().route(
         "/",
-        get(|DtzRequiredUser(profile): DtzRequiredUser| async move { format!("{:?}", profile) }),
+        get(|profile: DtzProfile| async move { format!("{:?}", profile) }),
     );
     let addr = format!("127.0.0.1:3000");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -223,6 +224,48 @@ async fn unauthorized_on_empty_header() {
             .unwrap();
     });
     let resp = reqwest::get("http://127.0.0.1:3000").await.unwrap();
+    println!("{resp:?}");
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_optional_user() {
+    let app = Router::new().route(
+        "/",
+        get(|profile: Option<DtzProfile>| async move { format!("{:?}", profile) }),
+    );
+    let addr = format!("127.0.0.1:3001");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+            })
+            .await
+            .unwrap();
+    });
+    let resp = reqwest::get("http://127.0.0.1:3001").await.unwrap();
+    println!("{resp:?}");
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_required_user() {
+    let app = Router::new().route(
+        "/",
+        get(|profile: DtzProfile| async move { format!("{:?}", profile) }),
+    );
+    let addr = format!("127.0.0.1:3002");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+            })
+            .await
+            .unwrap();
+    });
+    let resp = reqwest::get("http://127.0.0.1:3002").await.unwrap();
     println!("{resp:?}");
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }

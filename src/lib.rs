@@ -2,11 +2,8 @@
 
 //! crate to provide trait for easier implementation of user profiles within [DownToZero.cloud](https://downtozero.cloud)
 use axum::{
-    async_trait,
-    body::Body,
-    extract::FromRequestParts,
-    http::{header::HeaderValue, request::Parts, StatusCode},
-    response::Response,
+    extract::{FromRequestParts, OptionalFromRequestParts},
+    http::{header, header::HeaderValue, request::Parts, StatusCode},
 };
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
@@ -50,23 +47,6 @@ pub struct DtzProfile {
     pub token: String,
 }
 
-/// struct to hold an authenticated user profile
-pub struct DtzRequiredUser(pub DtzProfile);
-
-impl DtzRequiredUser {
-    /// checks for the required role, or answers with an http-401 (unauthorized)
-    pub fn ensure_role(&self, required_role: &str) -> Result<DtzProfile, Response> {
-        if self.0.require(required_role) {
-            Ok(self.0.clone())
-        } else {
-            Err(Response::builder()
-                .status(StatusCode::UNAUTHORIZED)
-                .body(Body::empty())
-                .unwrap())
-        }
-    }
-}
-
 impl DtzProfile {
     /// checks the profile for the required scope
     #[allow(dead_code)]
@@ -76,8 +56,7 @@ impl DtzProfile {
     }
 }
 
-#[async_trait]
-impl<B> FromRequestParts<B> for DtzRequiredUser
+impl<B> FromRequestParts<B> for DtzProfile
 where
     B: Send + std::marker::Sync,
 {
@@ -86,57 +65,34 @@ where
     async fn from_request_parts(req: &mut Parts, _state: &B) -> Result<Self, Self::Rejection> {
         let result = get_profile_from_request(req).await;
         match result {
-            Ok(profile) => Ok(DtzRequiredUser(profile)),
+            Ok(profile) => Ok(profile),
             Err(e) => Err((StatusCode::UNAUTHORIZED, e)),
         }
     }
 }
 
-/// struct to hold a user profile, if a user is authenticated
-pub struct DtzOptionalUser(pub Option<DtzProfile>);
-
-impl DtzOptionalUser {
-    /// checks for the required role, or answers with an http-401 (unauthorized)
-    pub fn ensure_role(&self, required_role: &str) -> Result<DtzProfile, Response> {
-        match &self.0 {
-            Some(profile) => {
-                if profile.require(required_role) {
-                    Ok(profile.clone())
-                } else {
-                    Err(Response::builder()
-                        .status(StatusCode::UNAUTHORIZED)
-                        .body(Body::empty())
-                        .unwrap())
-                }
-            }
-            None => Err(Response::builder()
-                .status(StatusCode::UNAUTHORIZED)
-                .body(Body::empty())
-                .unwrap()),
-        }
-    }
-}
-
-#[async_trait]
-impl<B> FromRequestParts<B> for DtzOptionalUser
+impl<B> OptionalFromRequestParts<B> for DtzProfile
 where
     B: Send + std::marker::Sync,
 {
     type Rejection = (StatusCode, String);
 
-    async fn from_request_parts(req: &mut Parts, _state: &B) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        req: &mut Parts,
+        _state: &B,
+    ) -> Result<Option<Self>, Self::Rejection> {
         let result = get_profile_from_request(req).await;
         match result {
-            Ok(profile) => Ok(DtzOptionalUser(Some(profile))),
-            Err(_e) => Ok(DtzOptionalUser(None)),
+            Ok(profile) => Ok(Some(profile)),
+            Err(_e) => Ok(None),
         }
     }
 }
 
 async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String> {
     let headers = req.headers.clone();
-    let cookie: Option<&HeaderValue> = headers.get("cookie");
-    let authorization: Option<&HeaderValue> = headers.get("authorization");
+    let cookie: Option<&HeaderValue> = headers.get(header::COOKIE);
+    let authorization: Option<&HeaderValue> = headers.get(header::AUTHORIZATION);
     let header_api_key: Option<&HeaderValue> = headers.get("x-api-key");
     let header_context_id: Option<&HeaderValue> = headers.get("x-dtz-context");
     let profile: DtzProfile;
@@ -394,7 +350,7 @@ async fn verifiy_api_key(
     let req = Request::builder()
         .method(Method::POST)
         .uri("https://identity.dtz.rocks/api/2021-02-21/auth/apikey")
-        .header("content-type", "application/json")
+        .header(header::CONTENT_TYPE, "application/json")
         .header("X-DTZ-SOURCE", hostname)
         .body(req_data.clone())
         .unwrap();

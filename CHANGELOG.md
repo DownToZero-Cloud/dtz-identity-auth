@@ -1,3 +1,8 @@
+# 2.0.0 2025-01-01
+
+* update to axum 0.8
+* adopt axum native mechanism for optional extraction
+
 # 1.1.3 2024-12-04
 
 * minor refactoring of get-parameter parsing
