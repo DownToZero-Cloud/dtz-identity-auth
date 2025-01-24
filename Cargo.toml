@@ -1,6 +1,6 @@
 [package]
 name = "dtz-identity-auth"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2021"
 authors = ["Jens Walter <jens@apimeister.com>"]
 license = "Apache-2.0"
@@ -12,10 +12,11 @@ rust-version = "1.75"
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-axum = { version = "0.8", features = ["http2"] }
+axum-core = { version = "0.5" }
 base64 = "0.22"
 cookie = "0.18"
 dtz-identifier = { version = "1" }
+http = "1"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["http1", "http2"] }
 hyper-rustls = { version = "0.27", features = ["http1", "http2"] }
@@ -33,3 +34,4 @@ uuid = { version = "1", features = ["serde", "v4"] }
 [dev-dependencies]
 tokio = { version = "1" }
 reqwest = { version = "0.12" }
+axum = { version = "0.8", features = ["http2"] }

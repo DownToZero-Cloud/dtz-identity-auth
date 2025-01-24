@@ -1,3 +1,7 @@
+# 2.0.1 2025-01-24
+
+* remove axum dependency
+
 # 2.0.0 2025-01-01
 
 * update to axum 0.8

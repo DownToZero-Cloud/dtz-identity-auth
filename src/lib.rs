@@ -1,13 +1,11 @@
 #![deny(missing_docs)]
 
 //! crate to provide trait for easier implementation of user profiles within [DownToZero.cloud](https://downtozero.cloud)
-use axum::{
-    extract::{FromRequestParts, OptionalFromRequestParts},
-    http::{header, header::HeaderValue, request::Parts, StatusCode},
-};
+use axum_core::extract::{FromRequestParts, OptionalFromRequestParts};
 use base64::{engine::general_purpose, Engine as _};
 use cookie::Cookie;
 use dtz_identifier::{ApiKeyId, ContextId, IdentityId};
+use http::{header, header::HeaderValue, request::Parts, StatusCode};
 use http_body_util::BodyExt;
 use hyper::{Method, Request};
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};
