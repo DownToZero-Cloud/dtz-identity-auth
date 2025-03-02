@@ -1,3 +1,7 @@
+# 2.1.1 2025-03-02
+
+* dependency update
+
 # 2.1.0 2025-03-02
 
 * support context field in JWT
