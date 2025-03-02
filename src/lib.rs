@@ -41,6 +41,9 @@ pub struct DtzProfile {
     /// available roles granted to the user
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub roles: Vec<String>,
+    /// available contexts granted to the user
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub contexts: Vec<ContextId>,
     /// raw token of the request, if api key was used, a new token is generated
     pub token: String,
 }
@@ -259,13 +262,20 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                     .unwrap();
                 let json_str = String::from_utf8_lossy(&decoded);
                 let json: Value = serde_json::de::from_str(&json_str).unwrap();
-                let roles_claim = json.get("roles").unwrap();
-                // let claims = Claims::from_base64(jwt_payload).unwrap();
-                // let roles_claim = claims.private.get("roles").unwrap();
+                let empty_arr = Value::Array(vec![]);
+                let roles_claim = json.get("roles").unwrap_or(&empty_arr);
+                let contexts_claim = json.get("contexts").unwrap_or(&empty_arr);
+                // process roles
                 let mut roles: Vec<String> = Vec::new();
                 let arr = roles_claim.as_array().unwrap();
                 for role in arr {
                     roles.push(role.as_str().unwrap().to_string());
+                }
+                // process contexts
+                let mut contexts: Vec<ContextId> = Vec::new();
+                let arr = contexts_claim.as_array().unwrap();
+                for context in arr {
+                    contexts.push(ContextId::try_from(context.as_str().unwrap()).unwrap());
                 }
                 let scope_str = json.get("scope").unwrap().as_str().unwrap();
                 let subject_str = json.get("sub").unwrap().as_str().unwrap();
@@ -291,6 +301,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                     identity_id: identity,
                     context_id: context,
                     roles,
+                    contexts,
                     token,
                 };
                 Ok(result)

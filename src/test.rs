@@ -18,6 +18,7 @@ fn test_replacement_identity() {
             id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
         },
         roles: vec!["admin".to_string()],
+        contexts: vec![],
         token: "".to_string(),
     };
     let result =
@@ -37,6 +38,7 @@ fn test_replacement_context() {
             id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
         },
         roles: vec!["admin".to_string()],
+        contexts: vec![],
         token: "".to_string(),
     };
     let result =
@@ -56,6 +58,7 @@ fn test_replacement_nothing() {
             id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
         },
         roles: vec!["admin".to_string()],
+        contexts: vec![],
         token: "".to_string(),
     };
     let result = super::replace_placeholder("https://dtz.rocks/context/admin", &identity);
