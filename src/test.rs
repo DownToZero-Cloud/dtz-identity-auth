@@ -12,10 +12,14 @@ use uuid::Uuid;
 fn test_replacement_identity() {
     let identity = DtzProfile {
         identity_id: IdentityId {
-            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+                .unwrap()
+                .to_string(),
         },
         context_id: ContextId {
-            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+                .unwrap()
+                .to_string(),
         },
         roles: vec!["admin".to_string()],
         contexts: vec![],
@@ -32,10 +36,14 @@ fn test_replacement_identity() {
 fn test_replacement_context() {
     let identity = DtzProfile {
         identity_id: IdentityId {
-            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+                .unwrap()
+                .to_string(),
         },
         context_id: ContextId {
-            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+                .unwrap()
+                .to_string(),
         },
         roles: vec!["admin".to_string()],
         contexts: vec![],
@@ -52,10 +60,14 @@ fn test_replacement_context() {
 fn test_replacement_nothing() {
     let identity = DtzProfile {
         identity_id: IdentityId {
-            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+                .unwrap()
+                .to_string(),
         },
         context_id: ContextId {
-            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
+            id: Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+                .unwrap()
+                .to_string(),
         },
         roles: vec!["admin".to_string()],
         contexts: vec![],

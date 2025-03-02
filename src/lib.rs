@@ -282,7 +282,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 let identity = match IdentityId::try_from(subject_str) {
                     Ok(id) => id,
                     Err(_err) => match Uuid::parse_str(subject_str) {
-                        Ok(id) => IdentityId::from(id),
+                        Ok(id) => IdentityId { id: id.to_string() },
                         Err(_err) => {
                             return Err("invalid token".to_string());
                         }
@@ -291,7 +291,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 let context = match ContextId::try_from(scope_str) {
                     Ok(id) => id,
                     Err(_err) => match Uuid::parse_str(scope_str) {
-                        Ok(id) => ContextId::from(id),
+                        Ok(id) => ContextId { id: id.to_string() },
                         Err(_err) => {
                             return Err("invalid token".to_string());
                         }
