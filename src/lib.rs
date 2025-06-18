@@ -92,17 +92,24 @@ where
 
 async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String> {
     let headers = req.headers.clone();
-    let cookie: Option<&HeaderValue> = headers.get(header::COOKIE);
+    let cookie_headers = headers.get_all(header::COOKIE);
     let authorization: Option<&HeaderValue> = headers.get(header::AUTHORIZATION);
     let header_api_key: Option<&HeaderValue> = headers.get("x-api-key");
     let header_context_id: Option<&HeaderValue> = headers.get("x-dtz-context");
     let profile: DtzProfile;
-    if let Some(cookie) = cookie {
-        match verify_token_from_cookie(cookie.clone()) {
-            Ok(p) => {
+    if cookie_headers.iter().next().is_some() {
+        let mut found = None;
+        for cookie in cookie_headers.iter() {
+            if let Ok(p) = verify_token_from_cookie(cookie.clone()) {
+                found = Some(p);
+                break;
+            }
+        }
+        match found {
+            Some(p) => {
                 profile = p;
             }
-            Err(_) => {
+            None => {
                 return Err("no valid token found in cookie".to_string());
             }
         }
