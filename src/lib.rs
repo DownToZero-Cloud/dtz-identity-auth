@@ -192,12 +192,15 @@ async fn verify_query_params(value: GetAuthParams) -> Result<DtzProfile, String>
 
 fn verify_token_from_cookie(cookie: HeaderValue) -> Result<DtzProfile, String> {
     let cookie_str = cookie.to_str().unwrap();
-    let mut final_cookie = None;
+    let mut final_cookie: Option<String> = None;
     for cookie in Cookie::split_parse(cookie_str) {
-        let cookie = cookie.unwrap();
-        if cookie.name() == "dtz-auth" {
-            let c = cookie.value().to_string();
-            final_cookie = Some(c);
+        match cookie {
+            Ok(cookie) => {
+                if cookie.name() == "dtz-auth" {
+                    final_cookie = Some(cookie.value().to_string());
+                }
+            }
+            Err(_) => continue,
         }
     }
     if let Some(token) = final_cookie {

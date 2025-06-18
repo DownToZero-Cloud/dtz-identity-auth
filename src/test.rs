@@ -190,6 +190,15 @@ fn multiple_cookies() {
 }
 
 #[test]
+fn invalid_cookie_in_header() {
+    let cookie_str = "dtz-auth=abcd; broken";
+    let cookie = HeaderValue::from_static(cookie_str);
+    let result = crate::verify_token_from_cookie(cookie);
+    println!("{result:?}");
+    assert!(result.is_err());
+}
+
+#[test]
 fn test_api_key_url() {
     let url = "https://billing.dtz.rocks/api/2022-12-28/charge/stripe?apiKey=apikey-00000000-0000-0000-0000-000000000000";
     let uri = Uri::from_static(url);
