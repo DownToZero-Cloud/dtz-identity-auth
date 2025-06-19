@@ -141,7 +141,7 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
             if context_id.is_empty() {
                 let result = ApiKeyId::try_from(header_api_key.to_str().unwrap());
                 return match result {
-                    Ok(key) => verifiy_api_key(&key, None).await,
+                    Ok(key) => verify_api_key(&key, None).await,
                     Err(err) => Err(err),
                 };
             } else {
@@ -149,7 +149,7 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
                 let context_id = ContextId::try_from(context_id.to_str().unwrap());
                 match (api_key, context_id) {
                     (Ok(api_key), Ok(context_id)) => {
-                        return verifiy_api_key(&api_key, Some(&context_id)).await;
+                        return verify_api_key(&api_key, Some(&context_id)).await;
                     }
                     _ => {
                         //fail
@@ -160,7 +160,7 @@ async fn get_profile_from_request(req: &mut Parts) -> Result<DtzProfile, String>
         } else {
             let result = ApiKeyId::try_from(header_api_key.to_str().unwrap());
             return match result {
-                Ok(key) => verifiy_api_key(&key, None).await,
+                Ok(key) => verify_api_key(&key, None).await,
                 Err(err) => Err(err),
             };
         }
@@ -178,14 +178,14 @@ async fn verify_query_params(value: GetAuthParams) -> Result<DtzProfile, String>
         if value.context_id.is_none() {
             let result = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
             match result {
-                Ok(key) => verifiy_api_key(&key, None).await,
+                Ok(key) => verify_api_key(&key, None).await,
                 Err(err) => Err(err),
             }
         } else {
             let api_key = ApiKeyId::try_from(value.api_key.unwrap_or_default().as_str());
             let context_id = ContextId::try_from(value.context_id.unwrap_or_default().as_str());
             match (api_key, context_id) {
-                (Ok(api_key), Ok(context_id)) => verifiy_api_key(&api_key, Some(&context_id)).await,
+                (Ok(api_key), Ok(context_id)) => verify_api_key(&api_key, Some(&context_id)).await,
                 _ => {
                     //fail
                     Err("not authorized".to_string())
@@ -229,7 +229,7 @@ async fn verify_basic_auth(bearer: &HeaderValue) -> Result<DtzProfile, String> {
             let password = parts.get(1).unwrap_or(&"");
             let result = ApiKeyId::try_from(*password);
             match result {
-                Ok(key) => verifiy_api_key(&key, None).await,
+                Ok(key) => verify_api_key(&key, None).await,
                 Err(err) => Err(err),
             }
         }
@@ -345,7 +345,7 @@ static KNOWN_IDENTITIES: Lazy<Mutex<LruCache<String, DtzProfile>>> = Lazy::new(|
     Mutex::new(m)
 });
 
-async fn verifiy_api_key(
+async fn verify_api_key(
     api_key: &ApiKeyId,
     context_id: Option<&ContextId>,
 ) -> Result<DtzProfile, String> {
