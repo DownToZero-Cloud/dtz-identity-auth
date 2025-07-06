@@ -50,6 +50,10 @@ pub struct DtzProfile {
 
 impl DtzProfile {
     /// checks the profile for the required scope
+    /// the required role is a template which can support the following placeholders:
+    /// - {identity_id}
+    /// - {context_id}
+    /// - {roles}
     #[allow(dead_code)]
     pub fn require(&self, required_role: &str) -> bool {
         let scope = replace_placeholder(required_role, self);
