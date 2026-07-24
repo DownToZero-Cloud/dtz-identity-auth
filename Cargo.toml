@@ -13,7 +13,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 axum-core = { version = "0.5" }
-base64 = "0.22"
+base64 = "0.23"
 cookie = "0.18"
 dtz-identifier = { version = "1" }
 http = "1"
