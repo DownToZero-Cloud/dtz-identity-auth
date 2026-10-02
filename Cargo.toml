@@ -6,7 +6,7 @@ authors = ["Jens Walter <jens@apimeister.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/DownToZero-Cloud/dtz-identity-auth/"
 description = "Provides authentication traits for DownToZero backends."
-rust-version = "1.87"
+rust-version = "1.90"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -21,7 +21,7 @@ http-body-util = "0.1"
 hyper = { version = "1", features = ["http1", "http2"] }
 hyper-rustls = { version = "0.27", features = ["http1", "http2"] }
 hyper-util = { version = "0.1", features = ["full"] }
-jwt-simple = { version = "0.13", default-features = false, features = [
+jwt-simple = { version = "0.15", default-features = false, features = [
     "pure-rust",
 ] }
 lru_time_cache = "0.11"
