@@ -1,3 +1,8 @@
+# 2.2.2 2026-10-02
+
+* dependency update
+* msrv bump
+
 # 2.2.1 2026-01-07
 
 * dependency update
