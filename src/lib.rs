@@ -344,10 +344,32 @@ struct GetAuthParams {
 }
 
 static ONE_HOUR: Duration = Duration::from_secs(3600);
+static ONE_MINUTE: Duration = Duration::from_secs(60);
 static KNOWN_IDENTITIES: Lazy<Mutex<LruCache<String, DtzProfile>>> = Lazy::new(|| {
     let m = LruCache::<String, DtzProfile>::with_expiry_duration_and_capacity(ONE_HOUR, 100);
     Mutex::new(m)
 });
+// api keys the identity service said no to. a client that keeps sending a
+// revoked key would otherwise cost one lookup with every single request
+static REJECTED_KEYS: Lazy<Mutex<LruCache<String, ()>>> = Lazy::new(|| {
+    let m = LruCache::<String, ()>::with_expiry_duration_and_capacity(ONE_MINUTE, 1000);
+    Mutex::new(m)
+});
+
+/// the profile of an api key that was verified within the last hour. the cache
+/// is read with `peek` because `get` would renew the entry: a key in regular
+/// use would then stay accepted forever, even after it was revoked
+fn known_identity(req_data: &str) -> Option<DtzProfile> {
+    KNOWN_IDENTITIES.lock().unwrap().peek(req_data).cloned()
+}
+
+fn is_rejected(req_data: &str) -> bool {
+    REJECTED_KEYS.lock().unwrap().contains_key(req_data)
+}
+
+fn remember_rejected(req_data: String) {
+    REJECTED_KEYS.lock().unwrap().insert(req_data, ());
+}
 
 async fn verify_api_key(
     api_key: &ApiKeyId,
@@ -361,12 +383,11 @@ async fn verify_api_key(
     } else {
         serde_json::json!({"apiKey":api_key}).to_string()
     };
-    {
-        let mut x = KNOWN_IDENTITIES.lock().unwrap();
-        if x.contains_key(&req_data) {
-            let profile = x.get(&req_data).unwrap().clone();
-            return Ok(profile);
-        }
+    if let Some(profile) = known_identity(&req_data) {
+        return Ok(profile);
+    }
+    if is_rejected(&req_data) {
+        return Err("not authorized".to_string());
     }
     //get hostname env var
     let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "localhost".to_string());
@@ -409,6 +430,11 @@ async fn verify_api_key(
                 }
                 result
             } else {
+                // only a definite no is remembered: when the identity service
+                // is unavailable or limits the caller, the next try may work
+                if resp.status() == StatusCode::UNAUTHORIZED {
+                    remember_rejected(req_data);
+                }
                 Err("not authorized".to_string())
             }
         }

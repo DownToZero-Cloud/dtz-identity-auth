@@ -293,3 +293,28 @@ async fn test_required_user() {
     println!("{resp:?}");
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn test_rejected_api_key_is_not_looked_up_again() {
+    let api_key = ApiKeyId::try_from("apikey-00000000-0000-0000-0000-000000000000").unwrap();
+    let req_data = serde_json::json!({"apiKey":api_key}).to_string();
+    assert!(!is_rejected(&req_data));
+    remember_rejected(req_data.clone());
+    assert!(is_rejected(&req_data));
+    // answered from the list of rejected keys, the identity service is not asked
+    let started = std::time::Instant::now();
+    assert!(verify_api_key(&api_key, None).await.is_err());
+    assert!(started.elapsed() < Duration::from_millis(20));
+}
+
+#[test]
+fn test_reading_the_cache_does_not_renew_an_entry() {
+    // the same kind of cache as KNOWN_IDENTITIES, with a lifetime short enough
+    // to wait for: an entry that is read all the time still has to expire
+    let mut cache = LruCache::<String, u8>::with_expiry_duration(Duration::from_millis(60));
+    cache.insert("key".to_string(), 1);
+    std::thread::sleep(Duration::from_millis(40));
+    assert_eq!(cache.peek("key"), Some(&1));
+    std::thread::sleep(Duration::from_millis(40));
+    assert_eq!(cache.peek("key"), None);
+}
