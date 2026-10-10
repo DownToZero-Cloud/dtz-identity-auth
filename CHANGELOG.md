@@ -1,3 +1,7 @@
+# 2.2.5 2026-10-10
+
+* tokens with a lifetime of more than six hours are no longer accepted
+
 # 2.2.2 2026-10-02
 
 * dependency update

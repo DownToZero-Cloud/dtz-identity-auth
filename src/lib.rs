@@ -9,7 +9,7 @@ use http::{StatusCode, header, header::HeaderValue, request::Parts};
 use http_body_util::BodyExt;
 use hyper::{Method, Request};
 use hyper_util::{client::legacy::Client, rt::TokioExecutor};
-use jwt_simple::prelude::{NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
+use jwt_simple::prelude::{JWTClaims, NoCustomClaims, RS256PublicKey, RSAPublicKeyLike};
 use lru_time_cache::LruCache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -30,6 +30,10 @@ Ia6rOs8bwtynVhAo++mkGQ+HUsSTSL7HO3Eum9s5ailYZRpjn+MZwJOQOXI5ps2v
 yJ7EF0xV5AiYKH/GP0W8s/1oEBoF8NMr8ZnZeSTqlgyXI7Mt58iFPzjCCHfznTEl
 QwIDAQAB
 -----END PUBLIC KEY-----"#;
+
+/// tokens are issued for six hours; a token that claims a longer lifetime is
+/// not accepted, even when its signature is valid
+const MAX_TOKEN_LIFETIME_SECS: u64 = 6 * 3600;
 
 /// User profile of DownToZero.cloud
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -269,7 +273,7 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
         let public_key = RS256PublicKey::from_pem(PUBLIC_KEY).unwrap();
         let claims = public_key.verify_token::<NoCustomClaims>(&token, None);
         match claims {
-            Ok(_) => {
+            Ok(claims) if has_accepted_lifetime(&claims) => {
                 // get claims from json
                 let decoded = general_purpose::STANDARD_NO_PAD
                     .decode(jwt_payload)
@@ -320,11 +324,22 @@ fn verify_token(token: String) -> Result<DtzProfile, String> {
                 };
                 Ok(result)
             }
-            Err(_) => Err("invalid token".to_string()),
+            _ => Err("invalid token".to_string()),
         }
     } else {
         //deny
         Err("not authorized".to_string())
+    }
+}
+
+/// the lifetime of a token is the time between its `iat` and `exp` claims; a
+/// token that lacks one of them has no limited lifetime and is not accepted
+fn has_accepted_lifetime(claims: &JWTClaims<NoCustomClaims>) -> bool {
+    match (claims.issued_at, claims.expires_at) {
+        (Some(issued_at), Some(expires_at)) => {
+            expires_at.as_secs().saturating_sub(issued_at.as_secs()) <= MAX_TOKEN_LIFETIME_SECS
+        }
+        _ => false,
     }
 }
 

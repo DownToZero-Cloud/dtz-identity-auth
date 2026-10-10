@@ -129,6 +129,25 @@ fn claims_decode_subject() {
 }
 
 #[test]
+fn test_token_lifetime_limit() {
+    use jwt_simple::prelude::{Claims, Duration};
+    assert!(has_accepted_lifetime(&Claims::create(Duration::from_hours(6))));
+    assert!(has_accepted_lifetime(&Claims::create(Duration::from_hours(1))));
+    assert!(!has_accepted_lifetime(&Claims::create(
+        Duration::from_secs(MAX_TOKEN_LIFETIME_SECS + 1)
+    )));
+    // the lifetime tokens were issued with before
+    assert!(!has_accepted_lifetime(&Claims::create(Duration::from_days(1))));
+    // without an issue or expiry time the lifetime is not limited
+    let mut claims = Claims::create(Duration::from_hours(1));
+    claims.issued_at = None;
+    assert!(!has_accepted_lifetime(&claims));
+    let mut claims = Claims::create(Duration::from_hours(1));
+    claims.expires_at = None;
+    assert!(!has_accepted_lifetime(&claims));
+}
+
+#[test]
 fn verify_broken_token() {
     let public_key = RS256PublicKey::from_pem(PUBLIC_KEY).unwrap();
     let token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImR0ejEifQ.eyJpc3MiOiJkdHoucm9ja3MiLCJzdWIiOiIwZTRkYWMyNC1kZDIzLTQ2NTUtYTQ3MS01MjY1M2ExMGQxNWYiLCJhdWQiOiJkdHoucm9ja3MiLCJzY29wZSI6IjNjZDg0NDI5LTY0YTQtNDIyNi1iODY4LWM4M2ZlZWZmMGY0NiIsInJvbGVzIjpbImh0dHBzOi8vZHR6LnJvY2tzL2Zsb3dzL2FkbWluLzNjZDg0NDI5LTY0YTQtNDIyNi1iODY4LWM4M2ZlZWZmMGY0NiIsImh0dHBzOi8vZHR6LnJvY2tzL2lkZW50aXR5L2FkbWluLzNjZDg0NDI5LTY0YTQtNDIyNi1iODY4LWM4M2ZlZWZmMGY0NiIsImh0dHBzOi8vZHR6LnJvY2tzL29ic2VydmFiaWxpdHkvYWRtaW4vM2NkODQ0MjktNjRhNC00MjI2LWI4NjgtYzgzZmVlZmYwZjQ2IiwiaHR0cHM6Ly9kdHoucm9ja3Mvb2JzZXJ2YWJpbGl0eS9hZG1pbi9kM2UxNDQyMi03YWJjLTQzMGQtYmU0OS1kNDNlY2RiMjVhYTYiLCJodHRwczovL2R0ei5yb2Nrcy9pZGVudGl0eS9hZG1pbi83OWU2ZmJmZS1kYTFmLTRjMzgtOGE5Ny00M2U4NDlmYzk4ZWEiLCJodHRwczovL2R0ei5yb2Nrcy9vYnNlcnZhYmlsaXR5L2FkbWluLzc5ZTZmYmZlLWRhMWYtNGMzOC04YTk3LTQzZTg0OWZjOThlYSIsImh0dHBzOi8vZHR6LnJvY2tzL2lkZW50aXR5L2FkbWluL2Q2Y2FmMTdhLWUyN2ItNDcwOC1hMTcxLTg2OTBkOGYxMmFmZSIsImh0dHBzOi8vZHR6LnJvY2tzL2NvbnRhaW5lcnMvYWRtaW4vM2NkODQ0MjktNjRhNC00MjI2LWI4NjgtYzgzZmVlZmYwZjQ2IiwiaHR0cHM6Ly9kdHoucm9ja3MvaWRlbnRpdHkvYXNzdW1lLzBlNGRhYzI0LWRkMjMtNDY1NS1hNDcxLTUyNjUzYTEwZDE1ZiIsImh0dHBzOi8vZHR6LnJvY2tzL2lkZW50aXR5L2Fzc3VtZS8zZmY2MGMzZC1hOTJlLTRhNmEtYjFlYS1hMjhmMmEzNmI0MTYiLCJodHRwczovL2R0ei5yb2Nrcy9pZGVudGl0eS9hc3N1bWUvZGQzYTZkYzAtODZkZi00YTNhLWFiYzQtZTMzMGU0MWNkMjVhIiwiaHR0cHM6Ly9kdHoucm9ja3MvYmlsbGluZy9hZG1pbi8wZTRkYWMyNC1kZDIzLTQ2NTUtYTQ3MS01MjY1M2ExMGQxNWYiLCJodHRwczovL2R0ei5yb2Nrcy9pZGVudGl0eS9hZG1pbi8wZTRkYWMyNC1kZDIzLTQ2NTUtYTQ3MS01MjY1M2ExMGQxNWYiLCJodHRwczovL2R0ei5yb2Nrcy9jb250ZXh0L2FkbWluLzNjZDg0NDI5LTY0YTQtNDIyNi1iODY4LWM4M2ZlZWZmMGY0NiIsImh0dHBzOi8vZHR6LnJvY2tzL2NvbnRleHQvYWRtaW4vZDZjYWYxN2EtZTI3Yi00NzA4LWExNzEtODY5MGQ4ZjEyYWZlIiwiaHR0cHM6Ly9kdHoucm9ja3MvY29udGFpbmVycy9hZG1pbi9kNmNhZjE3YS1lMjdiLTQ3MDgtYTE3MS04NjkwZDhmMTJhZmUiXSwiZXhwIjoxNjgwODUzMzY1LCJpYXQiOjE2ODA3NjY5NjV9.ACZ1x_L32jZj7iWZjarhuLssKkfOzkZbcToSVe9FEL8Y7iBo1Hlo8XIg26mq7dqDJCJhtS0KQAWDZq4rXq_nu0tiUWmL6ZlX3A0HlWjxBH1kbcwc4sMVbj3-k0Z7n3aTK_LH0hcoImYt7nBcV0naK4ZrLrPvSTWuOEw7TNCeh1kJitheXUvWxvBLG-1iK9QEDIVuRZk0KvhBajA2LM5DxnFw1nBVV6Ih8Maw_gU74s24VdhtsLievom4u_PR-CeeMR11Y1Xi9n7TrcAKH3RaeNIWDEuXcR-RFg99kUArcvVS12Bbkc7gf0MPo-APB_csO1ppbSJ9yXUHghsIRYN3xg";
