@@ -131,13 +131,19 @@ fn claims_decode_subject() {
 #[test]
 fn test_token_lifetime_limit() {
     use jwt_simple::prelude::{Claims, Duration};
-    assert!(has_accepted_lifetime(&Claims::create(Duration::from_hours(6))));
-    assert!(has_accepted_lifetime(&Claims::create(Duration::from_hours(1))));
+    assert!(has_accepted_lifetime(&Claims::create(
+        Duration::from_hours(6)
+    )));
+    assert!(has_accepted_lifetime(&Claims::create(
+        Duration::from_hours(1)
+    )));
     assert!(!has_accepted_lifetime(&Claims::create(
         Duration::from_secs(MAX_TOKEN_LIFETIME_SECS + 1)
     )));
     // the lifetime tokens were issued with before
-    assert!(!has_accepted_lifetime(&Claims::create(Duration::from_days(1))));
+    assert!(!has_accepted_lifetime(&Claims::create(
+        Duration::from_days(1)
+    )));
     // without an issue or expiry time the lifetime is not limited
     let mut claims = Claims::create(Duration::from_hours(1));
     claims.issued_at = None;
